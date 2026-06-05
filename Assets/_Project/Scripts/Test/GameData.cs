@@ -1,11 +1,12 @@
-using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class NormalObj : MonoBehaviour
+public class GameData : SingletonData<GameData>
 {
-    private void Start()
+
+
+    private void Awake()
     {
         
     }

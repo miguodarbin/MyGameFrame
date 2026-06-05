@@ -1,5 +1,7 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Reflection;
 using UnityEngine;
 
 
@@ -7,11 +9,9 @@ using UnityEngine;
 /// 不继承MonoBehaviour的单例模式基类
 /// </summary>
 /// <typeparam name="T"></typeparam>
-public class SingletonData<T> where T : SingletonData<T>, new()
+public abstract class SingletonData<T> where T : SingletonData<T>
 {
     private static T _instance;
-
-    //TODO：子类的构造函数可以被外部new
 
     public static T Instance
     {
@@ -19,7 +19,15 @@ public class SingletonData<T> where T : SingletonData<T>, new()
         {
             if (_instance == null)
             {
-                _instance = new T();
+                Type type = typeof(T);
+                var typeConstructor = type.GetConstructor(BindingFlags.Instance | BindingFlags.NonPublic, null, Type.EmptyTypes, null);
+                if (typeConstructor == null)
+                {
+                    Debug.Log("Could not find constructor for " + typeof(T).Name);
+                    return null;
+                }
+
+                _instance = (T)typeConstructor.Invoke(null);
             }
 
             return _instance;
