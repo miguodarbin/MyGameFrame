@@ -2,17 +2,30 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class SingletonMono : MonoBehaviour
+/// <summary>
+/// 单例类
+/// </summary>
+/// <typeparam name="T"></typeparam>
+public class SingletonMono<T> : MonoBehaviour where T : SingletonMono<T>
 {
-    // Start is called before the first frame update
-    void Start()
+    private static T _instance;
+
+    public static T Instance
     {
-        Debug.Log("SingletonMono Start");
+        get { return _instance; }
     }
 
-    // Update is called once per frame
-    void Update()
+    protected virtual void Awake()
     {
-        
+        if (_instance == null)
+        {
+            _instance = this as T;
+            DontDestroyOnLoad(this.gameObject);
+        }
+        else
+        {
+            Destroy(this.gameObject);
+            return;
+        }
     }
 }

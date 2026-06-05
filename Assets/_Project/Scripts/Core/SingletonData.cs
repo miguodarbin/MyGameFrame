@@ -11,7 +11,7 @@ public class SingletonData<T> where T : SingletonData<T>, new()
 {
     private static T _instance;
 
-    //似乎对子类的构造函数进行private修饰是无解的？？
+    //TODO：子类的构造函数可以被外部new
 
     public static T Instance
     {
@@ -25,14 +25,4 @@ public class SingletonData<T> where T : SingletonData<T>, new()
             return _instance;
         }
     }
-
-    // public static T GetInstance()
-    // {
-    //     if (_instance == null)
-    //     {
-    //         _instance = new T();
-    //     }
-    //
-    //     return _instance;
-    // }
 }
