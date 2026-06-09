@@ -1,19 +1,28 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
 public class TestMain : MonoBehaviour
 {
-    void Update()
+    private void Update()
     {
         if (Input.GetKeyDown(KeyCode.Space))
         {
-            TestObject.Instance.StartCoroutine();
+            var go = PoolManager.Instance.GetObj("Cube");
+            StartCoroutine(ReturnObject("Cube", go, 1f));
         }
 
-        if (Input.GetKeyUp(KeyCode.Space))
+        if (Input.GetKeyDown(KeyCode.S))
         {
-            TestObject.Instance.StopCoroutine();
+            var go = PoolManager.Instance.GetObj("Sphere");
+            StartCoroutine(ReturnObject("Sphere", go, 1f));
         }
+    }
+
+    private IEnumerator ReturnObject(string poolName, GameObject go, float time)
+    {
+        yield return new WaitForSeconds(time);
+        PoolManager.Instance.ReturnObj(go);
     }
 }

@@ -6,7 +6,7 @@ using UnityEngine;
 /// 不继承MonoBehaviour的单例模式基类，子类自己私有化构造函数
 /// </summary>
 /// <typeparam name="T"></typeparam>
-public abstract class SingletonData<T> where T : SingletonData<T>
+public abstract class SingletonCSharp<T> where T : SingletonCSharp<T>
 {
     private static T _instance;
 
