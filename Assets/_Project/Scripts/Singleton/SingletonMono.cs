@@ -4,7 +4,7 @@ using UnityEngine;
 /// 单例类
 /// 只要重写 Awake / OnDestroy，都必须调用 base.Awake() / base.OnDestroy()
 /// </summary>
-/// <typeparam name="T"></typeparam>
+/// <typeparam name="T">单例Instance类型</typeparam>
 public class SingletonMono<T> : MonoBehaviour where T : SingletonMono<T>
 {
     private static T _instance;

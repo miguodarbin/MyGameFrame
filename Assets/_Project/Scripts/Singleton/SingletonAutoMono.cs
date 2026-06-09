@@ -3,7 +3,7 @@ using UnityEngine;
 /// 实现自动访问属性自动生成对象并挂载单例组件的类
 /// 只要重写 Awake / OnDestroy，都必须调用 base.Awake() / base.OnDestroy()
 /// </summary>
-/// <typeparam name="T"></typeparam>
+/// <typeparam name="T">单例Instance类型</typeparam>
 
 public class SingletonAutoMono<T> : MonoBehaviour where T : SingletonAutoMono<T>
 {
