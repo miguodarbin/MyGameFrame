@@ -1,12 +1,9 @@
 using System;
-using System.Collections;
-using System.Collections.Generic;
 using System.Reflection;
 using UnityEngine;
 
-
 /// <summary>
-/// 不继承MonoBehaviour的单例模式基类
+/// 不继承MonoBehaviour的单例模式基类，子类自己私有化构造函数
 /// </summary>
 /// <typeparam name="T"></typeparam>
 public abstract class SingletonData<T> where T : SingletonData<T>
@@ -23,7 +20,7 @@ public abstract class SingletonData<T> where T : SingletonData<T>
                 var typeConstructor = type.GetConstructor(BindingFlags.Instance | BindingFlags.NonPublic, null, Type.EmptyTypes, null);
                 if (typeConstructor == null)
                 {
-                    Debug.Log("Could not find constructor for " + typeof(T).Name);
+                    Debug.LogError("无法找到非公开的构造函数：" + typeof(T).Name);
                     return null;
                 }
 

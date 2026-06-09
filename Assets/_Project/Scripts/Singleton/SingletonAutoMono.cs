@@ -1,9 +1,7 @@
-using System.Collections;
-using System.Collections.Generic;
-using Unity.VisualScripting;
 using UnityEngine;
 /// <summary>
 /// 实现自动访问属性自动生成对象并挂载单例组件的类
+/// 只要重写 Awake / OnDestroy，都必须调用 base.Awake() / base.OnDestroy()
 /// </summary>
 /// <typeparam name="T"></typeparam>
 
@@ -18,8 +16,8 @@ public class SingletonAutoMono<T> : MonoBehaviour where T : SingletonAutoMono<T>
             if (_instance == null)
             {
                 GameObject haveInstanceObj = new GameObject();
-                haveInstanceObj.AddComponent<T>();
                 haveInstanceObj.name = typeof(T).Name;
+                haveInstanceObj.AddComponent<T>();
             }
 
             return _instance;
