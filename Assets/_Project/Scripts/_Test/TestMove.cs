@@ -5,9 +5,15 @@ using UnityEngine;
 public class TestMove : MonoBehaviour
 {
     // Start is called before the first frame update
-    void Start()
+    void OnEnable()
     {
-        Invoke(nameof(ReturnThis), 1);
+        transform.position = Vector3.zero;
+        Invoke(nameof(ReturnThis), 100);
+    }
+
+    void OnDisable()
+    {
+        
     }
 
     // Update is called once per frame
@@ -18,6 +24,6 @@ public class TestMove : MonoBehaviour
 
     public void ReturnThis()
     {
-        PoolManager.Instance.ReturnObj(this.gameObject);
+        XPoolManager.Instance.ReturnGameObject(gameObject);
     }
 }

@@ -1,27 +1,17 @@
 using UnityEngine;
+
 /// <summary>
-/// 实现自动访问属性自动生成对象并挂载单例组件的类
+/// 单例类
 /// 只要重写 Awake / OnDestroy，都必须调用 base.Awake() / base.OnDestroy()
 /// </summary>
 /// <typeparam name="T">单例Instance类型</typeparam>
-
-public class SingletonAutoMono<T> : MonoBehaviour where T : SingletonAutoMono<T>
+public class XSingletonMono<T> : MonoBehaviour where T : XSingletonMono<T>
 {
     private static T _instance;
 
     public static T Instance
     {
-        get
-        {
-            if (_instance == null)
-            {
-                GameObject haveInstanceObj = new GameObject();
-                haveInstanceObj.name = typeof(T).Name;
-                haveInstanceObj.AddComponent<T>();
-            }
-
-            return _instance;
-        }
+        get { return _instance; }
     }
 
     protected virtual void Awake()
@@ -37,7 +27,6 @@ public class SingletonAutoMono<T> : MonoBehaviour where T : SingletonAutoMono<T>
             return;
         }
     }
-
     protected virtual void OnDestroy()
     {
         if (this as T != _instance)

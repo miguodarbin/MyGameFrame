@@ -7,7 +7,7 @@ using UnityEngine.Events;
 /// <summary>
 /// 公共 Mono 模块管理器
 /// </summary>
-public class MonoManager : SingletonAutoMono<MonoManager>
+public class XMonoManager : XSingletonAutoMono<XMonoManager>
 {
     private event UnityAction _onUpdate;
     private event UnityAction _onFixedUpdate;
