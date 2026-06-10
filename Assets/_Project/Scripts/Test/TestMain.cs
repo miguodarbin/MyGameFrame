@@ -9,20 +9,16 @@ public class TestMain : MonoBehaviour
     {
         if (Input.GetKeyDown(KeyCode.Space))
         {
-            var go = PoolManager.Instance.GetObj("Cube");
-            StartCoroutine(ReturnObject("Cube", go, 1f));
+            var go = PoolManager.Instance.GetObj("Cube",3);
+            go.transform.position = Vector3.zero;
+            
         }
 
         if (Input.GetKeyDown(KeyCode.S))
         {
-            var go = PoolManager.Instance.GetObj("Sphere");
-            StartCoroutine(ReturnObject("Sphere", go, 1f));
+            var go = PoolManager.Instance.GetObj("Sphere",3);
+            
         }
     }
-
-    private IEnumerator ReturnObject(string poolName, GameObject go, float time)
-    {
-        yield return new WaitForSeconds(time);
-        PoolManager.Instance.ReturnObj(go);
-    }
+    
 }
