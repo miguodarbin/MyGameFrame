@@ -16,6 +16,6 @@ public class Monster : MonoBehaviour
     private void Dead()
     {
         Debug.Log("Dead");
-        XEventCenter.Instance.EventTrigger<Monster>("OnMonsterDead", this);
+        XEventCenter.Instance.EventTrigger<Monster>(XEventType.E_Example, this);
     }
 }

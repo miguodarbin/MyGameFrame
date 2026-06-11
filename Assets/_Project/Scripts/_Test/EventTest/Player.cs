@@ -8,12 +8,12 @@ public class Player : MonoBehaviour
 {
     private void OnEnable()
     {
-        XEventCenter.Instance.AddListener<Monster>("OnMonsterDead", OnMonsterDead);
+        XEventCenter.Instance.AddEventListener<Monster>(XEventType.E_Example, OnMonsterDead);
     }
 
     private void OnDisable()
     {
-        XEventCenter.Instance.RemoveListener<Monster>("OnMonsterDead", OnMonsterDead);
+        XEventCenter.Instance.RemoveEventListener<Monster>(XEventType.E_Example, OnMonsterDead);
     }
 
     private void OnMonsterDead(Monster monster)
