@@ -226,16 +226,38 @@ public class XCSharpPoolWrapper<T> : XCSharpPoolWrapperBase where T : class, IXP
                 obj.Invalid();
             }
         }
+
         _usingList.Clear();
         _pool.Clear();
     }
 }
 
 /// <summary>
-/// 封装的unity池子,
-/// 外部可以直接UnityPoolManager.Instance.Get()就能拿去用了，
-/// 外部还对象就UnityPoolManager.Instance.Return(),或者用挂在对象上的XPoolGameObject还也行
+/// Resources 资源加载管理器。
 /// </summary>
+/// <remarks>
+/// 对外接口：
+/// <list type="number">
+/// <item>
+/// <description><c>GetGameObject(poolName, isLimited = false)</c>：从指定 GameObject 池中取对象 </description>
+/// </item>
+/// <item>
+/// <description><c>ReturnGameObject(obj)</c>：归还 GameObject 到它所属的池子 </description>
+/// </item>
+/// <item>
+/// <description><c> GetCsharpObject&lt;T&gt;()</c>： 从指定 C# 类型池中取一个对象 </description>
+/// </item>
+/// <item>
+/// <description><c> ReturnCsharpObject&lt;T&gt;(obj)</c>：归还普通 C# 对象到对应类型的池子 </description>
+/// </item>
+/// <item>
+/// <description><c> Clear() </c>： 清空所有 GameObject 池和 C# 对象池 </description>
+/// </item>
+/// <item>
+/// 从池中取出的对象，外部需要自己重置位置、状态、数据
+/// </item>
+/// </list>
+/// </remarks>
 public class XPoolManager : XSingletonCSharp<XPoolManager>
 {
     private XPoolManager()
@@ -326,6 +348,25 @@ public class XPoolManager : XSingletonCSharp<XPoolManager>
         poolData.Release(obj);
     }
 
+    public T GetCsharpObject<T>() where T : class, IXPoolObject, new()
+    {
+        if (_cSharpObjectPoolDict == null)
+        {
+            _cSharpObjectPoolDict = new Dictionary<Type, XCSharpPoolWrapperBase>();
+        }
+
+        Type type = typeof(T);
+
+        if (!_cSharpObjectPoolDict.ContainsKey(type))
+        {
+            XCSharpPoolWrapperBase csharpPoolWrapper = new XCSharpPoolWrapper<T>();
+            _cSharpObjectPoolDict.Add(type, csharpPoolWrapper);
+        }
+
+        var result = (_cSharpObjectPoolDict[type] as XCSharpPoolWrapper<T>)?.Pool.Get();
+        return result;
+    }
+
     public void ReturnCsharpObject<T>(T obj) where T : class, IXPoolObject, new()
     {
         if (obj == null || _cSharpObjectPoolDict == null)
@@ -347,24 +388,6 @@ public class XPoolManager : XSingletonCSharp<XPoolManager>
         (_cSharpObjectPoolDict[type] as XCSharpPoolWrapper<T>)?.Pool.Release(obj);
     }
 
-    public T GetCsharpObject<T>() where T : class, IXPoolObject, new()
-    {
-        if (_cSharpObjectPoolDict == null)
-        {
-            _cSharpObjectPoolDict = new Dictionary<Type, XCSharpPoolWrapperBase>();
-        }
-
-        Type type = typeof(T);
-
-        if (!_cSharpObjectPoolDict.ContainsKey(type))
-        {
-            XCSharpPoolWrapperBase csharpPoolWrapper = new XCSharpPoolWrapper<T>();
-            _cSharpObjectPoolDict.Add(type, csharpPoolWrapper);
-        }
-
-        var result = (_cSharpObjectPoolDict[type] as XCSharpPoolWrapper<T>)?.Pool.Get();
-        return result;
-    }
 
     public void Clear()
     {

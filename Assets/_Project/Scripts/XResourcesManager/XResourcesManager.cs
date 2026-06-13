@@ -5,38 +5,363 @@ using UnityEngine;
 using UnityEngine.Events;
 using Object = UnityEngine.Object;
 
-//首先目前的问题是什么？现在如果异步加载一个资源的话，会正常异步加载，会在下几帧加载完毕，但是在加载完毕之前如果再继续加载同一个资源，那不就浪费了吗，
-//所以想着能不能就是如果检测到了已经正在加载这个资源了，那好，我就不加载了，
-//但我也不报错，我看你传过来的回调是啥，等第一次加载完的那个协程走到加载完毕时运行回调那一步，我把你这次传来的回调，也加到第一次触发的回调里面，也算用了委托的多播
-//行，大概思路有了，这时候要细化一下，怎么检测这个资源有没有被正在加载？
-//这样吧，在Manager内部维护一个已加载资源的字典
-//key就用 资源名就用路径+类型，以防不同类型但是同名的不被加载
-//value就用 这个异步加载的asset用来判断这个异步加载有没有完，对了，还要有这个异步加载的总回调，到时候如果有多个同时加载，就统一用这个value的回调函数来触发，对了还有有个协程句柄，用来关闭重复的协程（这个可能涉及到同步加载那边，这一版先不管这个协程句柄能不能用到）
-//一开始我觉得等到真的去加载了，再先去判断这个字典有没有初始化，没有的话先初始化。但后来想了想，算了不这样搞了，反正这个资源加载肯定要用，还不如一开始就初始化好，省得每次调方法浪费性能去判空了。
-//然后判断这个字典里有没有这个资源名的value，
-//- 如果有的话，就说明这个资源被加载了或者正在加载，靠字典value里的asset是否为空判断是否加载完毕，
-//  --加载完毕了，那就直接触发外部给的回调，把asset传出去
-//  --没加载完，那就直接把外部给的回调添加到这个资源名的value里的总回调函数里
-//- 没有这个资源名的value就说明这个资源没有被加载
-//  -然后就去异步加载这个资源，把资源名字、回调函数、协程句柄注册到字典里
-// 然后都加载完了要把这个字典里的资源名的value里的Callback置空一下，否则这边长期揪着外部监听对象引用不放，外部监听对象被Destory了，GC看到这里有东西引用着，都无法回收，稍等啊，这种情况
-// 基本不可能发生啊，一般GC都是过场景的时候GC，而过场景的时候，我都需要把整个字典都清理了？好吧万一还有下个场景我需要用的资源，我可能不清，所以这个做法做得对，但似乎课上的唐老师没有写一部分逻辑？
-//好了，接下来继续做了，首先重复一下我们的目标，就是在同时加载两个相同的资源的时候，能正确处理异步加载、同步加载、单个资源卸载，刚才完成了处理异步加载，
-//接下来要处理同步加载了
-//分两个情况，第一种，同步加载了，再来一个同步，第二种情况，异步加载了，再来一个同步加载
-//情况1，第一次资源加载完成了，然后第二次又再同步加载A资源或者异步加载A资源，这时候就需要每次加载前都判断一下，目前字典里有没有加载过，
-//如果加载过就直接用加载的资源给到外部，没加载过再正常走同步加载或者异步加载
-//情况2 第一次资源A异步加载到一半，又来了一个同步加载资源A，此时应该取消异步协程，让Unity继续加载这个资源，同时用同步加载的方法去拿资源
-//同步方法处理完了，接下来处理单个资源卸载
-//要想卸载指定的一个资源，首先确定一下这个资源目前可能的状态，有可能是正在同步加载中？不可能。
-//可能的情况：异步加载中的资源，加载成功的资源
-//对于异步加载中的资源，由于Unity底层已经发布号令去加载了，C#这边没有组织Unity取消加载的API，所以只能先给加载信息里面加一个字段，比如删除标记给到true，
-//然后再协程最后满足了结束条件的那个case里，判断一下删除标记，如果true就删掉，卸载完还要把字典记录清除
-//对于已经加载成功的资源，就直接调用Unity的卸载资源的API就行，卸载完还要把字典记录清除
+/*
+
+* XResourcesManager 具体说明
+*
+* 一、这个 Manager 解决什么问题？
+*
+* 1. 统一封装 Resources 的同步 / 异步加载。
+* 2. 同一个资源重复加载时，Manager 内部只维护一份加载记录。
+* 3. 如果资源正在异步加载，后续相同资源请求不会重复开启新加载，而是合并回调。
+* 4. 如果资源已经加载完成，后续加载会直接返回缓存的 asset。
+* 5. 通过 refCount 记录“有多少处声明正在使用这个资源”。
+* 6. 只有 refCount 归零时，才允许真正移除 / 卸载资源。
+*
+*
+* 二、外部使用规则
+*
+* 核心原则：
+*
+* ```
+  谁 Load，谁负责 Unload。
+  ```
+* ```
+  Load 和 Unload 必须配对。
+  ```
+*
+* 外部不要关心资源之前有没有被别的地方加载过。
+* 哪个模块要用资源，哪个模块就直接调用 Load。
+* 不要为了复用资源，去从别的面板、别的 Controller、别的系统里拿资源。
+*
+* 正确理解：
+*
+* ```
+  外部只表达需求：
+  ```
+* ```
+      我要用这个资源。
+  ```
+* ```
+      我不用这个资源了。
+  ```
+*
+* ```
+  Manager 负责内部状态：
+  ```
+* ```
+      资源有没有加载过？
+  ```
+* ```
+      资源是不是正在加载？
+  ```
+* ```
+      有几个地方正在等它？
+  ```
+* ```
+      有几个地方还在用它？
+  ```
+* ```
+      什么时候可以卸载？
+  ```
+*
+*
+* 三、同步加载用法
+*
+* ```
+  GameObject prefab = XResourcesManager.Instance.LoadAsset<GameObject>("路径/资源名");
+  ```
+*
+* 注意：
+* 1. 路径从 Resources 文件夹内部开始写。
+* 2. 不写 Resources。
+* 3. 不写文件后缀。
+*
+* 示例：
+*
+* ```
+  Assets/Resources/Prefabs/Cube.prefab
+  ```
+*
+* 应写成：
+*
+* ```
+  LoadAsset<GameObject>("Prefabs/Cube");
+  ```
+*
+*
+* 四、异步加载用法
+*
+* ```
+  XResourcesManager.Instance.LoadAssetAsync<GameObject>("Prefabs/Cube", OnLoadCube);
+  ```
+*
+* ```
+  private void OnLoadCube(GameObject prefab)
+  ```
+* ```
+  {
+  ```
+* ```
+      Instantiate(prefab);
+  ```
+* ```
+  }
+  ```
+*
+* 异步加载注意：
+*
+* 1. 如果资源正在加载中，Manager 会把多个 callback 合并。
+* 2. 加载完成后，会统一回调所有还有效的 callback。
+* 3. 如果异步加载还没完成时某个调用者不用了，要把当初传入的 callback 传回 UnloadAsset。
+*
+* 推荐写法：
+*
+* ```
+  LoadAssetAsync<GameObject>("Prefabs/Cube", OnLoadCube);
+  ```
+* ```
+  UnloadAsset<GameObject>("Prefabs/Cube", OnLoadCube);
+  ```
+*
+* 不推荐写法：
+*
+* ```
+  LoadAssetAsync<GameObject>("Prefabs/Cube", obj => { ... });
+  ```
+*
+* 因为匿名 lambda 后续不好传回 UnloadAsset，无法精确移除这一次异步等待回调。
+*
+*
+* 五、卸载用法
+*
+* ```
+  XResourcesManager.Instance.UnloadAsset<GameObject>("Prefabs/Cube");
+  ```
+*
+* 或者异步加载中取消某个 callback：
+*
+* ```
+  XResourcesManager.Instance.UnloadAsset<GameObject>("Prefabs/Cube", OnLoadCube);
+  ```
+*
+* UnloadAsset 的真实含义不是“立刻卸载资源”。
+*
+* 它的真实含义是：
+*
+* ```
+  当前这个使用者不用了，所以 refCount--。
+  ```
+*
+* 真正是否卸载，要看：
+*
+* ```
+  refCount == 0 && unloadNow == true
+  ```
+*
+*
+* 六、unloadNow 参数说明
+*
+* ```
+  UnloadAsset<T>(assetName, callback, unloadNow);
+  ```
+*
+* unloadNow 表示：
+*
+* ```
+  当这次 Unload 后 refCount 归零时，要不要立刻移除 / 卸载资源。
+  ```
+*
+* unloadNow = true：
+*
+* ```
+  refCount 归零后，立刻从 Manager 字典中移除。
+  ```
+* ```
+  如果资源类型允许，会调用 Resources.UnloadAsset。
+  ```
+*
+* unloadNow = false：
+*
+* ```
+  refCount 归零后，暂时不移除。
+  ```
+* ```
+  资源继续留在 Manager 缓存中。
+  ```
+* ```
+  下次再 Load 同一个资源，可以直接复用，避免频繁加载 / 卸载。
+  ```
+*
+* 使用建议：
+*
+* ```
+  常用 UI 图标、常用音效、小资源：
+  ```
+* ```
+      可以 unloadNow = false，先留缓存。
+  ```
+*
+* ```
+  大贴图、大音频、临时关卡资源、Boss 专用资源：
+  ```
+* ```
+      可以 unloadNow = true，用完尽快释放。
+  ```
+*
+*
+* 七、UnloadUnUsedAssets 用法
+*
+* ```
+  XResourcesManager.Instance.UnloadUnUsedAssets();
+  ```
+*
+* 这个方法做两件事：
+*
+* 1. 先清理 Manager 字典里 refCount == 0 的资源记录。
+* 这一步是让 Manager 不再持有 asset 引用。
+*
+* 2. 再调用 Resources.UnloadUnusedAssets。
+* 这一步是让 Unity 真正扫描并卸载没人引用的资源。
+*
+* 注意：
+*
+* ```
+  ClearZeroRefCountInfo 只是“松手”。
+  ```
+* ```
+  Resources.UnloadUnusedAssets 才是“让 Unity 回收”。
+  ```
+*
+* 所以 UnloadUnUsedAssets 适合在这些时机调用：
+*
+* ```
+  过场景
+  ```
+* ```
+  进入新关卡
+  ```
+* ```
+  关闭大型模块
+  ```
+* ```
+  明确需要清理内存时
+  ```
+*
+*
+* 八、关于 GameObject / Component / AssetBundle
+*
+* GameObject、Component、AssetBundle 不适合直接用 Resources.UnloadAsset 单独卸载。
+*
+* 当前 Manager 的处理是：
+*
+* ```
+  对这类资源，refCount 归零时只从字典中移除记录。
+  ```
+* ```
+  真正内存释放交给后续 Resources.UnloadUnusedAssets 处理。
+  ```
+*
+* 注意：
+*
+* ```
+  Resources 加载出来的 Prefab asset 和 Instantiate 出来的场景实例不是一回事。
+  ```
+*
+* ```
+  Manager 管的是资源 asset。
+  ```
+* ```
+  Instantiate 出来的实例对象，需要外部自己 Destroy。
+  ```
+*
+*
+* 九、关于 refCount
+*
+* refCount 不是 C# GC 的引用。
+* refCount 是 Manager 自己维护的“使用票数”。
+*
+* ```
+  Load 一次，refCount +1。
+  ```
+* ```
+  Unload 一次，refCount -1。
+  ```
+* ```
+  refCount > 0，说明还有地方声明正在使用。
+  ```
+* ```
+  refCount == 0，说明当前没有地方声明正在使用。
+  ```
+*
+* 如果出现 refCount 小于 0：
+*
+* ```
+  说明 Unload 调多了。
+  ```
+* ```
+  或者 Load / Unload 没有配对。
+  ```
+*
+*
+* 十、Type 版本注意
+*
+* Type 版本已标记 Obsolete。
+*
+* 不要混用：
+*
+* ```
+  LoadAssetAsync<GameObject>("A", callback);
+  ```
+* ```
+  LoadAssetAsync("A", typeof(GameObject), callback);
+  ```
+*
+* 因为泛型版和 Type 版内部 loadInfo 类型不同，混用可能导致类型转换失败。
+*
+* 实际开发中优先使用泛型版本：
+*
+* ```
+  LoadAsset<T>
+  ```
+* ```
+  LoadAssetAsync<T>
+  ```
+* ```
+  UnloadAsset<T>
+  ```
+*
+*
+* 十一、最重要的使用约定
+*
+* 1. 不要绕过 Manager 直接 Resources.Load 同一个资源。
+* 2. 谁 Load，谁 Unload。
+* 3. 异步取消时，要传回同一个 callback。
+* 4. 不想立刻卸载就 unloadNow = false。
+* 5. 大清理时调用 UnloadUnUsedAssets。
+* 6. Manager 管 asset，不管 Instantiate 出来的实例。
+     */
 
 
 public class XAssetLoadAsyncInfoBase
 {
+    public int refCount = 0;
+
+    public void AddRefCount()
+    {
+        ++refCount;
+    }
+
+    public void SubRefCount()
+    {
+        --refCount;
+
+        if (refCount < 0)
+        {
+            Debug.LogError("引用计数小于0：Load 和 Unload 没有配对");
+            refCount = 0;
+        }
+    }
 }
 
 public class XAssetLoadAsyncAsyncInfo<T> : XAssetLoadAsyncInfoBase
@@ -44,13 +369,33 @@ public class XAssetLoadAsyncAsyncInfo<T> : XAssetLoadAsyncInfoBase
     public T asset;
     public UnityAction<T> totalCallback;
     public Coroutine coroutineInfo;
-    public bool deleteFlag = false;
+    public bool unloadNow; //如果这次卸载的资源是最后一个引用计数，那是否需要立马就卸载掉这个资源
 }
 
 
 /// <summary>
-/// string assetName也算是文件的完整路径，如果asset在Resources的别的文件夹下，由外部去写路径
+/// Resources 资源加载管理器
 /// </summary>
+/// <remarks>
+/// 对外接口：
+/// <list type="number">
+/// <item>
+/// <description><c>LoadAsset&lt;T&gt;(assetName)</c>：同步加载资源 </description>
+/// </item>
+/// <item>
+/// <description><c>LoadAssetAsync&lt;T&gt;(assetName, callback)</c>：异步加载资源 </description>
+/// </item>
+/// <item>
+/// <description><c>UnloadAsset&lt;T&gt;(assetName, callback = null, unloadNow = true)</c>：取消一次资源使用 </description>
+/// </item>
+/// <item>
+/// <description><c>UnloadUnUsedAssets(callback = null)</c>：清理全部未使用资源 </description>
+/// </item>
+/// <item>
+/// 外部只管加载调用，不用去想重复加载
+/// </item>
+/// </list>
+/// </remarks>
 public class XResourcesManager : XSingletonCSharp<XResourcesManager>
 {
     private XResourcesManager()
@@ -60,7 +405,16 @@ public class XResourcesManager : XSingletonCSharp<XResourcesManager>
     //字典，存储了所有异步加载的情况信息，Key是 路径+类型。Value是自定义结构类,包括了资源本体，异步加载完毕要触发的回调，这次异步加载的句柄
     private Dictionary<string, XAssetLoadAsyncInfoBase> _loadInfoDict = new Dictionary<string, XAssetLoadAsyncInfoBase>();
 
-    //异步加载资源 -泛型,可以按泛型参数给的类型查找资源，不同类型同名也没问题
+
+    /// <summary>
+    /// 异步加载资源 -泛型
+    /// 每调用一次，引用计数 +1
+    /// 如果同一个资源正在加载中，不会重复开启加载，而是合并 callback.加载完成后，会回调所有仍然有效的 callback
+    /// 不推荐使用Lambda表达式传递Callback，因为卸载需要再传这个回调函数
+    /// </summary>
+    /// <param name="assetName"> 资源路径 </param>
+    /// <param name="callback"> 加载完成触发这个回调 </param>
+    /// <typeparam name="T"> 要加载的资源类型 </typeparam>
     public void LoadAssetAsync<T>(string assetName, UnityAction<T> callback) where T : Object
     {
         string fullAssetName = assetName + "." + typeof(T).Name;
@@ -69,9 +423,10 @@ public class XResourcesManager : XSingletonCSharp<XResourcesManager>
         {
             var loadInfo = _loadInfoDict[fullAssetName] as XAssetLoadAsyncAsyncInfo<T>;
             //这里都靠名字和类型双保险进来了，_loadInfoDict[fullAssetName]的类型一定不会变,这里就不对loadInfo显示判空了,如果为空了，那就是第两次用的加载方法不一样，一次用的泛型异步加载，一次用的Type异步加载
+            loadInfo.AddRefCount();
             if (loadInfo.asset != null)
             {
-                callback.Invoke(loadInfo.asset);
+                callback?.Invoke(loadInfo.asset);
             }
             else
             {
@@ -82,6 +437,7 @@ public class XResourcesManager : XSingletonCSharp<XResourcesManager>
         else
         {
             var loadInfo = new XAssetLoadAsyncAsyncInfo<T>();
+            loadInfo.AddRefCount();
             _loadInfoDict.Add(fullAssetName, loadInfo);
             loadInfo.totalCallback += callback;
             //这句代码跑到StartCoroutine之后，
@@ -103,10 +459,19 @@ public class XResourcesManager : XSingletonCSharp<XResourcesManager>
         if (request.asset != null && request.asset is T asset)
         {
             loadInfo.asset = asset;
-            if (loadInfo.deleteFlag)
+            if (loadInfo.refCount == 0 && loadInfo.unloadNow)
             {
-                Resources.UnloadAsset(loadInfo.asset);
-                _loadInfoDict.Remove(fullAssetName);
+                if (loadInfo.asset is GameObject || loadInfo.asset is Component || loadInfo.asset is AssetBundle)
+                {
+                    // GameObject / Component / AssetBundle 不能用 Resources.UnloadAsset 单独卸,只是让Manager不再持有它，只能等之后调用 Resources.UnloadUnusedAssets的时候实现真正的卸载
+                    _loadInfoDict.Remove(fullAssetName);
+                }
+                else
+                {
+                    Resources.UnloadAsset(loadInfo.asset);
+                    _loadInfoDict.Remove(fullAssetName);
+                }
+
                 yield break;
             }
 
@@ -131,10 +496,11 @@ public class XResourcesManager : XSingletonCSharp<XResourcesManager>
         if (_loadInfoDict.ContainsKey(fullAssetName))
         {
             var loadInfo = _loadInfoDict[fullAssetName] as XAssetLoadAsyncAsyncInfo<Object>;
+            loadInfo.AddRefCount();
             //这里都靠名字和类型双保险进来了，_loadInfoDict[fullAssetName]的类型一定不会变,这里就不对loadInfo显示判空了
             if (loadInfo.asset != null)
             {
-                callback.Invoke(loadInfo.asset);
+                callback?.Invoke(loadInfo.asset);
             }
             else
             {
@@ -145,6 +511,7 @@ public class XResourcesManager : XSingletonCSharp<XResourcesManager>
         else
         {
             var loadInfo = new XAssetLoadAsyncAsyncInfo<Object>();
+            loadInfo.AddRefCount();
             _loadInfoDict.Add(fullAssetName, loadInfo);
             loadInfo.totalCallback += callback;
             //这句代码跑到StartCoroutine之后，
@@ -164,10 +531,19 @@ public class XResourcesManager : XSingletonCSharp<XResourcesManager>
         if (request.asset != null)
         {
             loadInfo.asset = request.asset;
-            if (loadInfo.deleteFlag)
+            if (loadInfo.refCount == 0 && loadInfo.unloadNow)
             {
-                Resources.UnloadAsset(loadInfo.asset);
-                _loadInfoDict.Remove(fullAssetName);
+                if (loadInfo.asset is GameObject || loadInfo.asset is Component || loadInfo.asset is AssetBundle)
+                {
+                    // GameObject / Component / AssetBundle 不能用 Resources.UnloadAsset 单独卸,只是让Manager不再持有它，只能等之后调用 Resources.UnloadUnusedAssets的时候实现真正的卸载
+                    _loadInfoDict.Remove(fullAssetName);
+                }
+                else
+                {
+                    Resources.UnloadAsset(loadInfo.asset);
+                    _loadInfoDict.Remove(fullAssetName);
+                }
+
                 yield break;
             }
 
@@ -183,7 +559,15 @@ public class XResourcesManager : XSingletonCSharp<XResourcesManager>
     }
 
 
-    //同步加载资源 -泛型
+    /// <summary>
+    /// 同步加载资源 -泛型
+    /// 每调用一次，引用计数 +1
+    /// 如果资源已经加载过，直接返回缓存资源
+    /// 如果资源正在异步加载中，会用同步加载接管，并触发之前等待的异步回调
+    /// </summary>
+    /// <param name="assetName"> 资源路径 </param>
+    /// <typeparam name="T"> 想要加载的资源类型 </typeparam>
+    /// <returns>资源</returns>
     public T LoadAsset<T>(string assetName) where T : Object
     {
         string fullAssetName = assetName + "." + typeof(T).Name;
@@ -191,6 +575,7 @@ public class XResourcesManager : XSingletonCSharp<XResourcesManager>
         {
             //加载的状态如何，如果加载完了，那就直接用，没加载完那就取消协程，但不取消Unity加载，让同步方法这里拿到资源对象,并代替执行之前协程的回调函数
             var loadInfo = _loadInfoDict[fullAssetName] as XAssetLoadAsyncAsyncInfo<T>;
+            loadInfo.AddRefCount();
             if (loadInfo.asset != null)
             {
                 return loadInfo.asset;
@@ -222,27 +607,24 @@ public class XResourcesManager : XSingletonCSharp<XResourcesManager>
             }
 
             var loadInfo = new XAssetLoadAsyncAsyncInfo<T>();
+            loadInfo.AddRefCount();
             _loadInfoDict.Add(fullAssetName, loadInfo);
             loadInfo.asset = asset;
             return asset;
         }
     }
 
-    //异步卸载未使用资源
-    public void UnloadUnUsedAssets(UnityAction callback)
-    {
-        XMonoManager.Instance.StartCoroutine(ReallyUnloadUnusedAssets(callback));
-    }
 
-    private IEnumerator ReallyUnloadUnusedAssets(UnityAction callback)
-    {
-        var request = Resources.UnloadUnusedAssets();
-        yield return request;
-        callback.Invoke();
-    }
-
-    //同步卸载指定资源-泛型
-    public void UnloadAsset<T>(string assetName) where T : Object
+    /// <summary>
+    /// 同步卸载指定资源-泛型
+    /// 每调用一次，引用计数 -1
+    /// 这个方法不一定会立刻卸载资源，只有 refCount == 0 且 unloadNow == true 时才会尝试卸载
+    /// </summary>
+    /// <param name="assetName"></param>
+    /// <param name="callback">你想卸载的这个资源，当时加载的时候用的哪个回调，传给这个参数，用来断开这个回调等待加载完成。同步加载的资源不用传这个参数</param>
+    /// <param name="unloadNow">引用计数归零后是否立刻移除，如果卸载之后，之后可能还会加载，选False</param>
+    /// <typeparam name="T">想要卸载的那个资源类型</typeparam>
+    public void UnloadAsset<T>(string assetName, UnityAction<T> callback = null, bool unloadNow = true) where T : Object
     {
         string fullAssetName = assetName + "." + typeof(T).Name;
         if (!_loadInfoDict.ContainsKey(fullAssetName))
@@ -251,19 +633,36 @@ public class XResourcesManager : XSingletonCSharp<XResourcesManager>
         }
 
         var loadInfo = _loadInfoDict[fullAssetName] as XAssetLoadAsyncAsyncInfo<T>;
+        loadInfo.unloadNow = unloadNow;
+        loadInfo.SubRefCount();
+
+
+        //资源没加载完，引用计数等于零或者大于零的情况是一致的
+        //资源加载完了，引用计数等于零和大于零是要讨论了
         if (loadInfo.asset == null)
         {
-            loadInfo.deleteFlag = true;
+            loadInfo.totalCallback -= callback;
         }
         else
         {
-            Resources.UnloadAsset(loadInfo.asset);
-            _loadInfoDict.Remove(fullAssetName);
+            if (loadInfo.refCount == 0 && loadInfo.unloadNow)
+            {
+                if (loadInfo.asset is GameObject || loadInfo.asset is Component || loadInfo.asset is AssetBundle)
+                {
+                    // GameObject / Component / AssetBundle 不能用 Resources.UnloadAsset 单独卸,只是让Manager不再持有它，只能等之后调用 Resources.UnloadUnusedAssets的时候实现真正的卸载
+                    _loadInfoDict.Remove(fullAssetName);
+                }
+                else
+                {
+                    Resources.UnloadAsset(loadInfo.asset);
+                    _loadInfoDict.Remove(fullAssetName);
+                }
+            }
         }
     }
 
     //同步卸载指定资源-Type
-    public void UnloadAsset(string assetName, Type type)
+    public void UnloadAsset(string assetName, Type type, UnityAction<Object> callback = null, bool unloadNow = true)
     {
         string fullAssetName = assetName + "." + type.Name;
         if (!_loadInfoDict.ContainsKey(fullAssetName))
@@ -272,14 +671,83 @@ public class XResourcesManager : XSingletonCSharp<XResourcesManager>
         }
 
         var loadInfo = _loadInfoDict[fullAssetName] as XAssetLoadAsyncAsyncInfo<Object>;
+        loadInfo.SubRefCount();
+        loadInfo.unloadNow = unloadNow;
         if (loadInfo.asset == null)
         {
-            loadInfo.deleteFlag = true;
+            loadInfo.totalCallback -= callback;
         }
         else
         {
-            Resources.UnloadAsset(loadInfo.asset);
-            _loadInfoDict.Remove(fullAssetName);
+            if (loadInfo.refCount == 0 && loadInfo.unloadNow)
+            {
+                if (loadInfo.asset is GameObject || loadInfo.asset is Component || loadInfo.asset is AssetBundle)
+                {
+                    // GameObject / Component / AssetBundle 不能用 Resources.UnloadAsset 单独卸,只是让Manager不再持有它，只能等之后调用 Resources.UnloadUnusedAssets的时候实现真正的卸载
+                    _loadInfoDict.Remove(fullAssetName);
+                }
+                else
+                {
+                    Resources.UnloadAsset(loadInfo.asset);
+                    _loadInfoDict.Remove(fullAssetName);
+                }
+            }
+        }
+    }
+
+    public int ShowRefCount<T>(string assetName) where T : Object
+    {
+        string fullAssetName = assetName + "." + typeof(T).Name;
+        if (!_loadInfoDict.ContainsKey(fullAssetName))
+        {
+            return 0;
+        }
+        else
+        {
+            return _loadInfoDict[fullAssetName].refCount;
+        }
+    }
+
+
+    /// <summary>
+    /// 异步卸载当前没有使用的 Resources 资源
+    /// 过场景、切换大模块、关闭大型界面、需要主动清理内存时。
+    /// </summary>
+    /// <param name="callback">清理完成调用的回调函数</param>
+    public void UnloadUnUsedAssets(UnityAction callback = null)
+    {
+        if (_loadInfoDict == null)
+        {
+            return;
+        }
+
+        ClearZeroRefCountInfo();
+
+        XMonoManager.Instance.StartCoroutine(ReallyUnloadUnusedAssets(callback));
+    }
+
+    private IEnumerator ReallyUnloadUnusedAssets(UnityAction callback)
+    {
+        var request = Resources.UnloadUnusedAssets();
+        yield return request;
+        callback?.Invoke();
+    }
+
+    //将0引用计数的asset从字典中移除，一定要配合UnloadUnUsedAssets() 使用才完整
+    private void ClearZeroRefCountInfo()
+    {
+        List<string> zeroRefLoadInfoKeys = new List<string>();
+        foreach (var loadInfoPair in _loadInfoDict)
+        {
+            if (loadInfoPair.Value.refCount == 0)
+            {
+                zeroRefLoadInfoKeys.Add(loadInfoPair.Key);
+            }
+        }
+
+        foreach (var loadInfoKey in zeroRefLoadInfoKeys)
+        {
+            _loadInfoDict.Remove(loadInfoKey);
         }
     }
 }
