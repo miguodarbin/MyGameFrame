@@ -7,9 +7,8 @@ public class TestMain : MonoBehaviour
 {
     private void Start()
     {
-        XResourcesManager.Instance.LoadAsset<GameObject>("Test");
-        XPoolManager.Instance.Clear();
-        
+        var prefab = XEditorAssetManager.Instance.LoadEditorAsset<GameObject>("Cube");
+        Instantiate(prefab);
     }
 
     public void OnPrefabLoaded1(GameObject go)
@@ -21,6 +20,4 @@ public class TestMain : MonoBehaviour
     {
         Instantiate(go);
     }
-
-
 }
