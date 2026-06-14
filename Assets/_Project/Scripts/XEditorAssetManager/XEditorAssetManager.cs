@@ -39,6 +39,7 @@ public class XEditorAssetManager : XSingletonCSharp<XEditorAssetManager>
     //1. 加载单个资源
     public T LoadEditorAsset<T>(string assetName) where T : Object
     {
+#if UNITY_EDITOR
         string assetSuffix = "";
 
         if (typeof(T) == typeof(GameObject))
@@ -66,11 +67,15 @@ public class XEditorAssetManager : XSingletonCSharp<XEditorAssetManager>
         }
 
         return asset;
+#else
+        return null;
+#endif
     }
 
     //2.加载图集中的某个Sprite
     public Sprite LoadAtlasSprite(string atlasName, string spriteName)
     {
+#if UNITY_EDITOR
         //强行规定图集后缀必须是".png"
         var atlas = AssetDatabase.LoadAllAssetsAtPath(_rootPath + atlasName + ".png");
         if (atlas == null)
@@ -92,11 +97,15 @@ public class XEditorAssetManager : XSingletonCSharp<XEditorAssetManager>
 
         Debug.LogError($"未找到{spriteName}，加载失败");
         return null;
+#else
+        return null;
+#endif
     }
 
     //3.加载某个图集，并返回字典
     public Dictionary<string, Sprite> LoadSpriteAtlas(string atlasName)
     {
+#if UNITY_EDITOR
         Dictionary<string, Sprite> atlas = new Dictionary<string, Sprite>();
         //强行规定图集后缀必须是".png"
         var atlasObjects = AssetDatabase.LoadAllAssetsAtPath(_rootPath + atlasName + ".png");
@@ -115,5 +124,8 @@ public class XEditorAssetManager : XSingletonCSharp<XEditorAssetManager>
         }
 
         return atlas;
+#else
+        return null;
+#endif
     }
 }

@@ -7,17 +7,7 @@ public class TestMain : MonoBehaviour
 {
     private void Start()
     {
-        var prefab = XEditorAssetManager.Instance.LoadEditorAsset<GameObject>("Cube");
-        Instantiate(prefab);
-    }
-
-    public void OnPrefabLoaded1(GameObject go)
-    {
-        Instantiate(go);
-    }
-
-    public void OnPrefabLoaded2(GameObject go)
-    {
-        Instantiate(go);
+        XABManager.Instance.GetAssetBundleResAsync<GameObject>("test", "cube", (o => { Instantiate(o); }));
+        XABManager.Instance.GetAssetBundleResAsync<GameObject>("test", "cube", (o => { Instantiate(o); }));
     }
 }
