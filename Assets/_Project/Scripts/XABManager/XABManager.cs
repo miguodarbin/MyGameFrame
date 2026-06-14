@@ -106,41 +106,14 @@ public class XABManager : XSingletonAutoMono<XABManager>
         }
     }
 
-
-    //同步加载资源 - 用普通名字查找资源
-    public Object GetAssetBundleRes(string packageName, string resName)
-    {
-        //加载一下主包或者依赖包
-        TryLoadMainBundle(packageName);
-        var obj = _assetBundleDict[packageName].LoadAsset(resName);
-        return obj;
-    }
-
-    //同步加载资源 - 用泛型和名字查找资源
-    public T GetAssetBundleRes<T>(string packageName, string resName) where T : Object
-    {
-        TryLoadMainBundle(packageName);
-        T obj = _assetBundleDict[packageName].LoadAsset<T>(resName);
-        return obj;
-    }
-
-    //同步加载资源 - 用Type和名字查找资源
-    public Object GetAssetBundleRes(string packageName, string resName, Type type)
-    {
-        TryLoadMainBundle(packageName);
-        var obj = _assetBundleDict[packageName].LoadAsset(resName, type);
-        return obj;
-    }
-
-
     //异步加载资源 - 用普通名字查找资源
-    public void GetAssetBundleResAsync(string packageName, string resName, UnityAction<Object> callback)
+    public void GetAssetBundleRes(string packageName, string resName, UnityAction<Object> callback, bool isSync = false)
     {
         TryLoadMainBundle(packageName);
-        StartCoroutine(LoadAssetAsync(packageName, resName, callback));
+        StartCoroutine(ReallyLoadAsset(packageName, resName, callback, isSync));
     }
 
-    private IEnumerator LoadAssetAsync(string packageName, string resName, UnityAction<Object> callback)
+    private IEnumerator ReallyLoadAsset(string packageName, string resName, UnityAction<Object> callback, bool isSync = false)
     {
         //如果字典里有记录了，就说明有这个资源包了
         if (_assetBundleDict.ContainsKey(packageName))
@@ -173,18 +146,34 @@ public class XABManager : XSingletonAutoMono<XABManager>
                 //没这个依赖包的记录
                 if (!_assetBundleDict.ContainsKey(dependInfo))
                 {
-                    _assetBundleDict.Add(dependInfo, null);
-                    var dependRequest = AssetBundle.LoadFromFileAsync(_assetBundlePath + "/" + dependInfo);
-                    yield return dependRequest;
-                    if (dependRequest.assetBundle == null)
+                    //如果是同步加载的话
+                    if (isSync)
                     {
-                        Debug.LogError("加载依赖包失败：" + dependInfo);
-                        _assetBundleDict.Remove(dependInfo);
-                        _assetBundleDict.Remove(packageName);
-                        yield break;
-                    }
+                        var bundle = AssetBundle.LoadFromFile(_assetBundlePath + "/" + dependInfo);
+                        if (bundle == null)
+                        {
+                            Debug.LogError("同步加载依赖包失败：" + dependInfo);
+                            _assetBundleDict.Remove(packageName);
+                            yield break;
+                        }
 
-                    _assetBundleDict[dependInfo] = dependRequest.assetBundle;
+                        _assetBundleDict.Add(dependInfo, bundle);
+                    }
+                    else //如果是异步加载的话
+                    {
+                        _assetBundleDict.Add(dependInfo, null);
+                        var dependRequest = AssetBundle.LoadFromFileAsync(_assetBundlePath + "/" + dependInfo);
+                        yield return dependRequest;
+                        if (dependRequest.assetBundle == null)
+                        {
+                            Debug.LogError("加载依赖包失败：" + dependInfo);
+                            _assetBundleDict.Remove(dependInfo);
+                            _assetBundleDict.Remove(packageName);
+                            yield break;
+                        }
+
+                        _assetBundleDict[dependInfo] = dependRequest.assetBundle;
+                    }
                 }
                 else //有这个依赖包记录
                 {
@@ -206,37 +195,67 @@ public class XABManager : XSingletonAutoMono<XABManager>
             }
 
             //2.加载资源包
-            var packageRequest = AssetBundle.LoadFromFileAsync(_assetBundlePath + "/" + packageName);
-            yield return packageRequest;
-            if (packageRequest.assetBundle == null)
+            if (isSync)
             {
-                Debug.LogError("加载资源包失败,可能资源包的名字或路径不对？");
-                _assetBundleDict.Remove(packageName);
+                var bundle = AssetBundle.LoadFromFile(_assetBundlePath + "/" + packageName);
+                if (bundle == null)
+                {
+                    Debug.LogError("同步加载资源包失败,可能资源包的名字或路径不对？");
+                    _assetBundleDict.Remove(packageName);
+                    yield break;
+                }
+
+                _assetBundleDict[packageName] = bundle;
+            }
+            else
+            {
+                var packageRequest = AssetBundle.LoadFromFileAsync(_assetBundlePath + "/" + packageName);
+                yield return packageRequest;
+                if (packageRequest.assetBundle == null)
+                {
+                    Debug.LogError("加载资源包失败,可能资源包的名字或路径不对？");
+                    _assetBundleDict.Remove(packageName);
+                    yield break;
+                }
+
+                _assetBundleDict[packageName] = packageRequest.assetBundle;
+            }
+        }
+
+        //到这一步就说明处理好资源包和依赖包了，处理资源就好了
+        if (isSync)
+        {
+            var asset = _assetBundleDict[packageName].LoadAsset(resName);
+            if (asset == null)
+            {
+                Debug.LogError("同步加载资源失败,可能资源文件的名字或路径不对？");
                 yield break;
             }
 
-            _assetBundleDict[packageName] = packageRequest.assetBundle;
+            callback?.Invoke(asset);
         }
-
-        var resRequest = _assetBundleDict[packageName].LoadAssetAsync(resName);
-        yield return resRequest;
-        if (resRequest.asset == null)
+        else
         {
-            Debug.Log("加载资源失败,可能资源文件的名字或路径不对？");
-            yield break;
-        }
+            var resRequest = _assetBundleDict[packageName].LoadAssetAsync(resName);
+            yield return resRequest;
+            if (resRequest.asset == null)
+            {
+                Debug.LogError("加载资源失败,可能资源文件的名字或路径不对？");
+                yield break;
+            }
 
-        callback?.Invoke(resRequest.asset);
+            callback?.Invoke(resRequest.asset);
+        }
     }
 
     //异步加载资源 - 用泛型和名字查找资源
-    public void GetAssetBundleResAsync<T>(string packageName, string resName, UnityAction<T> callback) where T : Object
+    public void GetAssetBundleRes<T>(string packageName, string resName, UnityAction<T> callback, bool isSync = false) where T : Object
     {
         TryLoadMainBundle(packageName);
-        StartCoroutine(LoadAssetAsync(packageName, resName, callback));
+        StartCoroutine(ReallyLoadAsset(packageName, resName, callback, isSync));
     }
 
-    private IEnumerator LoadAssetAsync<T>(string packageName, string resName, UnityAction<T> callback) where T : Object
+    private IEnumerator ReallyLoadAsset<T>(string packageName, string resName, UnityAction<T> callback, bool isSync = false) where T : Object
     {
         //如果字典里有记录了，就说明有这个资源包了
         if (_assetBundleDict.ContainsKey(packageName))
@@ -269,18 +288,34 @@ public class XABManager : XSingletonAutoMono<XABManager>
                 //没这个依赖包的记录
                 if (!_assetBundleDict.ContainsKey(dependInfo))
                 {
-                    _assetBundleDict.Add(dependInfo, null);
-                    var dependRequest = AssetBundle.LoadFromFileAsync(_assetBundlePath + "/" + dependInfo);
-                    yield return dependRequest;
-                    if (dependRequest.assetBundle == null)
+                    //如果是同步加载的话
+                    if (isSync)
                     {
-                        Debug.LogError("加载依赖包失败：" + dependInfo);
-                        _assetBundleDict.Remove(dependInfo);
-                        _assetBundleDict.Remove(packageName);
-                        yield break;
-                    }
+                        var bundle = AssetBundle.LoadFromFile(_assetBundlePath + "/" + dependInfo);
+                        if (bundle == null)
+                        {
+                            Debug.LogError("同步加载依赖包失败：" + dependInfo);
+                            _assetBundleDict.Remove(packageName);
+                            yield break;
+                        }
 
-                    _assetBundleDict[dependInfo] = dependRequest.assetBundle;
+                        _assetBundleDict.Add(dependInfo, bundle);
+                    }
+                    else //如果是异步加载的话
+                    {
+                        _assetBundleDict.Add(dependInfo, null);
+                        var dependRequest = AssetBundle.LoadFromFileAsync(_assetBundlePath + "/" + dependInfo);
+                        yield return dependRequest;
+                        if (dependRequest.assetBundle == null)
+                        {
+                            Debug.LogError("加载依赖包失败：" + dependInfo);
+                            _assetBundleDict.Remove(dependInfo);
+                            _assetBundleDict.Remove(packageName);
+                            yield break;
+                        }
+
+                        _assetBundleDict[dependInfo] = dependRequest.assetBundle;
+                    }
                 }
                 else //有这个依赖包记录
                 {
@@ -302,38 +337,67 @@ public class XABManager : XSingletonAutoMono<XABManager>
             }
 
             //2.加载资源包
-
-            var packageRequest = AssetBundle.LoadFromFileAsync(_assetBundlePath + "/" + packageName);
-            yield return packageRequest;
-            if (packageRequest.assetBundle == null)
+            if (isSync)
             {
-                Debug.LogError("加载资源包失败,可能资源包的名字或路径不对？");
-                _assetBundleDict.Remove(packageName);
+                var bundle = AssetBundle.LoadFromFile(_assetBundlePath + "/" + packageName);
+                if (bundle == null)
+                {
+                    Debug.LogError("同步加载资源包失败,可能资源包的名字或路径不对？");
+                    _assetBundleDict.Remove(packageName);
+                    yield break;
+                }
+
+                _assetBundleDict[packageName] = bundle;
+            }
+            else
+            {
+                var packageRequest = AssetBundle.LoadFromFileAsync(_assetBundlePath + "/" + packageName);
+                yield return packageRequest;
+                if (packageRequest.assetBundle == null)
+                {
+                    Debug.LogError("加载资源包失败,可能资源包的名字或路径不对？");
+                    _assetBundleDict.Remove(packageName);
+                    yield break;
+                }
+
+                _assetBundleDict[packageName] = packageRequest.assetBundle;
+            }
+        }
+
+        //到这一步就说明处理好资源包和依赖包了，处理资源就好了
+        if (isSync)
+        {
+            var asset = _assetBundleDict[packageName].LoadAsset<T>(resName);
+            if (asset == null)
+            {
+                Debug.LogError("同步加载资源失败,可能资源文件的名字或路径不对？");
                 yield break;
             }
 
-            _assetBundleDict[packageName] = packageRequest.assetBundle;
+            callback?.Invoke(asset);
         }
-
-        var resRequest = _assetBundleDict[packageName].LoadAssetAsync<T>(resName);
-        yield return resRequest;
-        if (resRequest.asset == null)
+        else
         {
-            Debug.Log("加载资源失败,可能资源文件的名字或路径不对？");
-            yield break;
-        }
+            var resRequest = _assetBundleDict[packageName].LoadAssetAsync<T>(resName);
+            yield return resRequest;
+            if (resRequest.asset == null)
+            {
+                Debug.LogError("加载资源失败,可能资源文件的名字或路径不对？");
+                yield break;
+            }
 
-        callback?.Invoke(resRequest.asset as T);
+            callback?.Invoke(resRequest.asset as T);
+        }
     }
 
     //异步加载资源 - 用Type和名字查找资源
-    public void GetAssetBundleResAsync(string packageName, string resName, Type type, UnityAction<Object> callback)
+    public void GetAssetBundleRes(string packageName, string resName, Type type, UnityAction<Object> callback, bool isSync = false)
     {
         TryLoadMainBundle(packageName);
-        StartCoroutine(LoadAssetAsync(packageName, resName, type, callback));
+        StartCoroutine(ReallyLoadAsset(packageName, resName, type, callback, isSync));
     }
 
-    private IEnumerator LoadAssetAsync(string packageName, string resName, Type type, UnityAction<Object> callback)
+    private IEnumerator ReallyLoadAsset(string packageName, string resName, Type type, UnityAction<Object> callback, bool isSync = false)
     {
         //如果字典里有记录了，就说明有这个资源包了
         if (_assetBundleDict.ContainsKey(packageName))
@@ -366,18 +430,34 @@ public class XABManager : XSingletonAutoMono<XABManager>
                 //没这个依赖包的记录
                 if (!_assetBundleDict.ContainsKey(dependInfo))
                 {
-                    _assetBundleDict.Add(dependInfo, null);
-                    var dependRequest = AssetBundle.LoadFromFileAsync(_assetBundlePath + "/" + dependInfo);
-                    yield return dependRequest;
-                    if (dependRequest.assetBundle == null)
+                    //如果是同步加载的话
+                    if (isSync)
                     {
-                        Debug.LogError("加载依赖包失败：" + dependInfo);
-                        _assetBundleDict.Remove(dependInfo);
-                        _assetBundleDict.Remove(packageName);
-                        yield break;
-                    }
+                        var bundle = AssetBundle.LoadFromFile(_assetBundlePath + "/" + dependInfo);
+                        if (bundle == null)
+                        {
+                            Debug.LogError("同步加载依赖包失败：" + dependInfo);
+                            _assetBundleDict.Remove(packageName);
+                            yield break;
+                        }
 
-                    _assetBundleDict[dependInfo] = dependRequest.assetBundle;
+                        _assetBundleDict.Add(dependInfo, bundle);
+                    }
+                    else //如果是异步加载的话
+                    {
+                        _assetBundleDict.Add(dependInfo, null);
+                        var dependRequest = AssetBundle.LoadFromFileAsync(_assetBundlePath + "/" + dependInfo);
+                        yield return dependRequest;
+                        if (dependRequest.assetBundle == null)
+                        {
+                            Debug.LogError("加载依赖包失败：" + dependInfo);
+                            _assetBundleDict.Remove(dependInfo);
+                            _assetBundleDict.Remove(packageName);
+                            yield break;
+                        }
+
+                        _assetBundleDict[dependInfo] = dependRequest.assetBundle;
+                    }
                 }
                 else //有这个依赖包记录
                 {
@@ -399,28 +479,57 @@ public class XABManager : XSingletonAutoMono<XABManager>
             }
 
             //2.加载资源包
-
-            var packageRequest = AssetBundle.LoadFromFileAsync(_assetBundlePath + "/" + packageName);
-            yield return packageRequest;
-            if (packageRequest.assetBundle == null)
+            if (isSync)
             {
-                Debug.LogError("加载资源包失败,可能资源包的名字或路径不对？");
-                _assetBundleDict.Remove(packageName);
+                var bundle = AssetBundle.LoadFromFile(_assetBundlePath + "/" + packageName);
+                if (bundle == null)
+                {
+                    Debug.LogError("同步加载资源包失败,可能资源包的名字或路径不对？");
+                    _assetBundleDict.Remove(packageName);
+                    yield break;
+                }
+
+                _assetBundleDict[packageName] = bundle;
+            }
+            else
+            {
+                var packageRequest = AssetBundle.LoadFromFileAsync(_assetBundlePath + "/" + packageName);
+                yield return packageRequest;
+                if (packageRequest.assetBundle == null)
+                {
+                    Debug.LogError("加载资源包失败,可能资源包的名字或路径不对？");
+                    _assetBundleDict.Remove(packageName);
+                    yield break;
+                }
+
+                _assetBundleDict[packageName] = packageRequest.assetBundle;
+            }
+        }
+
+        //到这一步就说明处理好资源包和依赖包了，处理资源就好了
+        if (isSync)
+        {
+            var asset = _assetBundleDict[packageName].LoadAsset(resName, type);
+            if (asset == null)
+            {
+                Debug.LogError("同步加载资源失败,可能资源文件的名字或路径不对？");
                 yield break;
             }
 
-            _assetBundleDict[packageName] = packageRequest.assetBundle;
+            callback?.Invoke(asset);
         }
-
-        var resRequest = _assetBundleDict[packageName].LoadAssetAsync(resName, type);
-        yield return resRequest;
-        if (resRequest.asset == null)
+        else
         {
-            Debug.Log("加载资源失败,可能资源文件的名字或路径不对？");
-            yield break;
-        }
+            var resRequest = _assetBundleDict[packageName].LoadAssetAsync(resName, type);
+            yield return resRequest;
+            if (resRequest.asset == null)
+            {
+                Debug.LogError("加载资源失败,可能资源文件的名字或路径不对？");
+                yield break;
+            }
 
-        callback?.Invoke(resRequest.asset);
+            callback?.Invoke(resRequest.asset);
+        }
     }
 
 

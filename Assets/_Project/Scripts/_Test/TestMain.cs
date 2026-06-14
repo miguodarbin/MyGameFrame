@@ -7,7 +7,7 @@ public class TestMain : MonoBehaviour
 {
     private void Start()
     {
-        XABManager.Instance.GetAssetBundleResAsync<GameObject>("test", "cube", (o => { Instantiate(o); }));
-        XABManager.Instance.GetAssetBundleResAsync<GameObject>("test", "cube", (o => { Instantiate(o); }));
+        XABManager.Instance.GetAssetBundleRes<GameObject>("test", "cube", (o => { Instantiate(o); }));
+        XABManager.Instance.GetAssetBundleRes<GameObject>("test", "cube", (o => { Instantiate(o); }));
     }
 }
