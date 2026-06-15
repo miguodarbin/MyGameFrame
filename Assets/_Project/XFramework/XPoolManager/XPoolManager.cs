@@ -233,7 +233,7 @@ public class XCSharpPoolWrapper<T> : XCSharpPoolWrapperBase where T : class, IXP
 }
 
 /// <summary>
-/// Resources 资源加载管理器。
+/// 对象池管理器
 /// </summary>
 /// <remarks>
 /// 对外接口：
@@ -253,8 +253,22 @@ public class XCSharpPoolWrapper<T> : XCSharpPoolWrapperBase where T : class, IXP
 /// <item>
 /// <description><c> Clear() </c>： 清空所有 GameObject 池和 C# 对象池 </description>
 /// </item>
-/// <item>
-/// 从池中取出的对象，外部需要自己重置位置、状态、数据
+/// </list>
+/// </remarks>
+/// /// <remarks>
+/// 外部须知：
+/// <list type="number">
+///  <item>
+/// GameObject 预制体必须放在 Resources/PoolPrefabs/ 下，且文件名要等于 poolName
+/// </item>
+///  <item>
+/// 外部需要自己重置对象的位置、旋转、状态、数据
+/// </item>
+///  <item>
+/// isLimited = true 时，如果达到数量上限，会直接复用最早取出的对象，外部必须重新初始化它
+/// </item>
+///  <item>
+/// 普通 C# 池对象必须实现 IXPoolObject，并提供无参构造函数
 /// </item>
 /// </list>
 /// </remarks>
@@ -271,12 +285,6 @@ public class XPoolManager : XSingletonCSharp<XPoolManager>
 
     public static bool PrettyShow = false;
 
-    /// <summary>
-    /// 获得对象的方法
-    /// </summary>
-    /// <param name="poolName">从哪个池子拿，没有这个池子会自动创建</param>
-    /// <param name="isLimited">在场景上的对象数量要不要限制</param>
-    /// <returns></returns>
     public GameObject GetGameObject(string poolName, bool isLimited = false)
     {
         if (_gameObjectPoolDict == null) //初始化管理器字典

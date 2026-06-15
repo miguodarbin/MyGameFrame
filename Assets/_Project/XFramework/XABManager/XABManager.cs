@@ -21,10 +21,10 @@ using Object = UnityEngine.Object;
 /// <description><c>UnloadAllAssetBundle()</c>：卸载全部 AB 包，并清空主包、Manifest 和 AB 包缓存字典 </description>
 /// </item>
 /// <item>
-/// isSync开启的话是同步加载
+/// Load 可以无脑用
 /// </item>
-/// /// <item>
-/// 只缓存 AB 包，不缓存单个资源。
+/// <item>
+/// Unload 在切场景、切模块、退出游戏时统一 UnloadAllAssetBundle
 /// </item>
 /// </list>
 /// </remarks>

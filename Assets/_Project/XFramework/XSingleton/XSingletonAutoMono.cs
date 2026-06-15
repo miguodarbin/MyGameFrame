@@ -1,9 +1,13 @@
 using UnityEngine;
+
 /// <summary>
-/// 实现自动访问属性自动生成对象并挂载单例组件的类
-/// 只要重写 Awake / OnDestroy，都必须调用 base.Awake() / base.OnDestroy()
+/// 给 Mono对象 实现单例,并自动生成一个GameObject到场景上
 /// </summary>
-/// <typeparam name="T">单例Instance类型</typeparam>
+/// <list type="number">
+/// <item>
+/// <description>外部子类必须写非 public 的无参构造函数，防止被 new</description>
+/// </item>
+/// </list>
 
 public class XSingletonAutoMono<T> : MonoBehaviour where T : XSingletonAutoMono<T>
 {

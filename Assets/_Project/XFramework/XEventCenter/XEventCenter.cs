@@ -1,28 +1,7 @@
-using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Events;
 
-#region 思路
-
-//我想做什么？我想让观察者每次执行回调的时候，都能拿到被观察者送出来的数据
-//所以说回调方法的签名里就要有一个想要的参数类型
-//所以添加回调的 AddListener就应该是泛型方法，调用AddListener的时候才指定UnityAction这个委托里面到底装的什么参数列表的函数
-//所以说事件的字典Value也应该是 UnityAction<T>，要不然无法添加AddListener这个泛型方法给到的委托
-//但问题来了，如果字典Value也应该是 UnityAction<T>，就强迫着XEventCenter是个泛型类了，但这不对了，如果XEventCenter是个泛型类，就不符合事件中心的单例特性了
-//所以要像个桥接字典的Value和AddListener之间的“中间态”
-//那我就不让这个字典直接存UnityAction<T>了，我搞一个Base类，让UnityAction<T>继承Base类，然字典的Value存Base，然后用Base转成UnityAction，等等，UnityAction继承Base类？
-//虽然UnityAction属于引用类型的delegate，但是delegate不能给他写继承，
-//那还有别的办法能实现把UnityAction<T> action变成某个通用的东西放给Dictionary的Value吗？刚才考虑的继承一个父类是不行的
-//那我用一个泛型类装这个泛型委托呢？把泛型委托当做泛型类的字段，然后点出这个泛型委托
-//但这只是把泛型委托包装成了泛型类，诶？对啊，都变成了泛型类，那就可以用刚才不行的基类转子类了
-//也就是这样的，核心泛型委托作为字段，包上一层泛型类，然后再包上一层通用Base类，然后这个Base类给字典，但是我这么推理只是为了消除报错，具体监听者和被监听者怎么流转数据我还是有点懵
-//先试试吧
-//emmm,似乎有点理解？被观察者和观察者要提前商量好，才不会出错，具体来说就是监听者通过AddListener<T>封装了一个指定类型的XUnityActionWrapperBase基类存到字典里了，
-//调用EventTrigger<T>的时候必须把它准确的把当时AddListener<T>封装了一个指定类型不差的填进去，有点像XUnityActionWrapperBase是个加密包，T就是密码，然后EventTrigger<T>和AddListener<T>必须是同样的密码才能正常工作
-//然后字典就相当于存的是key是string，value是加密包的一个字点了
-
-#endregion
 
 public class XUnityActionWrapperBase
 {
@@ -40,8 +19,48 @@ public class XUnityActionWrapper : XUnityActionWrapperBase
 
 
 /// <summary>
-/// 监听者和被监听者如果想传递数据包，可以用泛型版本的public方法
+/// 全局事件中心
 /// </summary>
+/// <remarks>
+/// 对外接口：
+/// <list type="number">
+/// <item>
+/// <description><c>AddEventListener&lt;T&gt;(eventName, action)</c>：监听带参数事件 </description>
+/// </item>
+/// <item>
+/// <description><c>RemoveEventListener&lt;T&gt;(eventName, action)</c>：取消监听带参数事件 </description>
+/// </item>
+/// <item>
+/// <description><c>AddEventListener(eventName, action)</c>：监听无参数事件 </description>
+/// </item>
+/// <item>
+/// <description><c>RemoveEventListener(eventName, action)</c>：取消监听无参数事件 </description>
+/// </item>
+/// <item>
+/// <description><c>EventTrigger&lt;T&gt;(eventName, param)</c>：触发带参数事件 </description>
+/// </item>
+/// <item>
+/// <description><c>EventTrigger(eventName)</c>：触发无参数事件 </description>
+/// </item>
+/// <item>
+/// <description><c>ClearEventListener(eventName)</c>：清理某一个事件的全部监听者 </description>
+/// </item>
+/// <item>
+/// <description><c>ClearAllEvent()</c>：清理全部事件 </description>
+/// </item>
+/// </list>
+/// </remarks>
+/// <remarks>
+/// 外部须知：
+/// <list type="number">
+///  <item>
+/// 同一个事件名第一次注册时，会决定这个事件的参数类型 ! 后续 Add / Remove / Trigger 必须使用相同的参数类型 ！
+/// </item>
+///  <item>
+/// 所有事件名都必须先注册到 public enum XEventType 中
+/// </item>
+/// </list>
+/// </remarks>
 public class XEventCenter : XSingletonCSharp<XEventCenter>
 {
     private XEventCenter()

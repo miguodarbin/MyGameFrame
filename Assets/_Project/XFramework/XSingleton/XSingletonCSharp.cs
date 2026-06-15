@@ -3,9 +3,13 @@ using System.Reflection;
 using UnityEngine;
 
 /// <summary>
-/// 不继承MonoBehaviour的单例模式基类，子类自己私有化构造函数
+/// 给 Csharp对象 实现单例
 /// </summary>
-/// <typeparam name="T">单例Instance类型</typeparam>
+/// <list type="number">
+/// <item>
+/// <description>外部子类如果重写 Awake / OnDestroy，要记得调用 base.Awake() / base.OnDestroy()</description>
+/// </item>
+/// </list>
 public abstract class XSingletonCSharp<T> where T : XSingletonCSharp<T>
 {
     private static T _instance;

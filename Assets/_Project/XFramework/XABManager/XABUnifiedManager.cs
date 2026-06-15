@@ -5,26 +5,21 @@ using UnityEngine.Events;
 
 /// <summary>
 /// AB资源统一加载入口。
-/// 在编辑器下可以选择从 Editor/ArtRes 直接加载，或从 AB 包加载；
-/// 发布后始终从 AB 包加载。
 /// </summary>
 /// <remarks>
 /// 对外接口：
 /// <list type="number">
 /// <item>
-/// <description><c>LoadAsset&lt;T&gt;(packageName, resName, callback, isSync)</c>：统一加载AB相关资源。</description>
+/// <description><c>LoadAsset&lt;T&gt;(packageName, resName, callback, isSync)</c>：统一加载AB相关资源</description>
 /// </item>
 /// <item>
-/// <description><c>UseEditorAsset = true</c>：编辑器下从 Assets/Editor/ArtRes/packageName 加载。</description>
+/// <description>Load 可以无脑调用</description>
+/// </item>
+/// /// <item>
+/// <description>要卸载AB包，需要调用 XABManager</description>
 /// </item>
 /// <item>
-/// <description><c>UseEditorAsset = false</c>：编辑器下也走 AB 包加载，从 Assets/StreamingAssets 加载。</description>
-/// </item>
-/// <item>
-/// <description>发布后不管开关是什么，都会走 AB 包加载。</description>
-/// </item>
-/// <item>
-/// <description>资源摆放规则：Assets/Editor/ArtRes/packageName/resName，文件夹名对应AB包名。</description>
+/// <description>资源摆放规则：Assets/Editor/ArtRes/packageName/resName，文件夹名对应AB包名</description>
 /// </item>
 /// </list>
 /// </remarks>
@@ -34,7 +29,10 @@ public class XABUnifiedManager : XSingletonCSharp<XABUnifiedManager>
     {
     }
 
-    public static bool UseEditorAsset = false;
+    //true的话，在编辑器就用同步加载
+    //false的话，在编辑器就用AB异步加载
+    //无论是true还是false，运行时都是AB异步加载
+    public static bool UseEditorAsset = true;
 
     public void LoadAsset<T>(string packageName, string resName, UnityAction<T> callback, bool isSync = false) where T : Object
     {
