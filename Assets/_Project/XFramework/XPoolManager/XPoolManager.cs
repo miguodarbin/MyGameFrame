@@ -283,7 +283,7 @@ public class XPoolManager : XSingletonCSharp<XPoolManager>
     private Dictionary<Type, XCSharpPoolWrapperBase> _cSharpObjectPoolDict;
 
 
-    public static bool PrettyShow = false;
+    public static bool PrettyShow = true;
 
     public GameObject GetGameObject(string poolName, bool isLimited = false)
     {
