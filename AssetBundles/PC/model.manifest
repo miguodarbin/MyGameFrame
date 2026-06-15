@@ -1,15 +1,15 @@
 ManifestFileVersion: 0
-CRC: 2390758469
+CRC: 2245493656
 Hashes:
   AssetFileHash:
     serializedVersion: 2
-    Hash: 33cb286b34c0f399a4ad31e8d80f786a
+    Hash: d28495342ffdbcdebaaeb04afdff4b94
   TypeTreeHash:
     serializedVersion: 2
-    Hash: 16c8aa2ea7eeb9c3aebb6cebe2273284
+    Hash: 48f9e47804cc6149eb45c38c55466448
   IncrementalBuildHash:
     serializedVersion: 2
-    Hash: 33cb286b34c0f399a4ad31e8d80f786a
+    Hash: d28495342ffdbcdebaaeb04afdff4b94
 HashAppended: 0
 ClassTypes:
 - Class: 1
@@ -24,11 +24,10 @@ ClassTypes:
   Script: {instanceID: 0}
 - Class: 43
   Script: {instanceID: 0}
-- Class: 48
-  Script: {instanceID: 0}
 - Class: 65
   Script: {instanceID: 0}
 SerializeReferenceClassIdentifiers: []
 Assets:
 - Assets/Editor/ArtRes/Cube.prefab
-Dependencies: []
+Dependencies:
+- D:/UnityProjects/MyGameFrame/AssetBundles/PC/material

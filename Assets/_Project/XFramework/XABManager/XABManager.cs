@@ -5,10 +5,29 @@ using UnityEngine;
 using UnityEngine.Events;
 using Object = UnityEngine.Object;
 
-
 /// <summary>
-/// 主要是调用里面的LoadABRes这个公开接口，来加载AB包里的资源
+/// AB包 资源加载管理器
 /// </summary>
+/// <remarks>
+/// 对外接口：
+/// <list type="number">
+/// <item>
+/// <description><c>LoadAbAsset&lt;T&gt;(string packageName, string resName, UnityAction&lt;T&gt; callback, bool isSync = false)</c>：按泛型类型加载指定 AB 包中的资源 </description>
+/// </item>
+/// <item>
+/// <description><c>UnloadAssetBundle(string packageName, UnityAction&lt;bool&gt; callback)(atlasName, spriteName)</c>： 卸载指定 AB 包，不能单独卸载主包 </description>
+/// </item>
+/// <item>
+/// <description><c>UnloadAllAssetBundle()</c>：卸载全部 AB 包，并清空主包、Manifest 和 AB 包缓存字典 </description>
+/// </item>
+/// <item>
+/// isSync开启的话是同步加载
+/// </item>
+/// /// <item>
+/// 只缓存 AB 包，不缓存单个资源。
+/// </item>
+/// </list>
+/// </remarks>
 public class XABManager : XSingletonAutoMono<XABManager>
 {
     //避免重复加载AB包 - 字典
@@ -204,7 +223,7 @@ public class XABManager : XSingletonAutoMono<XABManager>
 
 
     //异步加载资源 - 用泛型和名字查找资源
-    public void GetAssetBundleRes<T>(string packageName, string resName, UnityAction<T> callback, bool isSync = false) where T : Object
+    public void LoadAbAsset<T>(string packageName, string resName, UnityAction<T> callback, bool isSync = false) where T : Object
     {
         if (!TryLoadMainBundle())
         {
@@ -253,7 +272,7 @@ public class XABManager : XSingletonAutoMono<XABManager>
 
 
     //异步加载资源 - 用普通名字查找资源
-    public void GetAssetBundleRes(string packageName, string resName, UnityAction<Object> callback, bool isSync = false)
+    public void LoadAbAsset(string packageName, string resName, UnityAction<Object> callback, bool isSync = false)
     {
         if (!TryLoadMainBundle())
         {
@@ -302,7 +321,7 @@ public class XABManager : XSingletonAutoMono<XABManager>
 
 
     //异步加载资源 - 用Type和名字查找资源
-    public void GetAssetBundleRes(string packageName, string resName, Type type, UnityAction<Object> callback, bool isSync = false)
+    public void LoadAbAsset(string packageName, string resName, Type type, UnityAction<Object> callback, bool isSync = false)
     {
         if (!TryLoadMainBundle())
         {
@@ -354,6 +373,13 @@ public class XABManager : XSingletonAutoMono<XABManager>
     //大概是同步卸载，卸载指定AB包
     public void UnloadAssetBundle(string packageName, UnityAction<bool> callback)
     {
+        if (packageName == MainAssetBundleName)
+        {
+            Debug.LogError("主包不能单独卸载，请使用 UnloadAllAssetBundle");
+            callback?.Invoke(false);
+            return;
+        }
+
         if (_assetBundleDict == null)
         {
             return;
