@@ -9,20 +9,9 @@ public class TestMain : MonoBehaviour
     private void Start()
     {
         XUIManager.Instance.ShowPanel<GamePanel>(XCustomUILayer.E_Top);
-        XUIManager.Instance.ShowPanel<GamePanel>(XCustomUILayer.E_Top);
-        // XUIManager.Instance.HidePanel<GamePanel>();
     }
 
     private void Update()
     {
-        if (Input.GetKeyDown(KeyCode.Space))
-        {
-            XUIManager.Instance.ShowPanel<GamePanel>(XCustomUILayer.E_Top);
-        }
-
-        if (Input.GetKeyDown(KeyCode.Escape))
-        {
-            XUIManager.Instance.HidePanel<GamePanel>();
-        }
     }
 }
