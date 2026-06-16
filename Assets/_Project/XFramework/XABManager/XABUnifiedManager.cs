@@ -32,7 +32,7 @@ public class XABUnifiedManager : XSingletonCSharp<XABUnifiedManager>
     //true的话，在编辑器就用同步加载
     //false的话，在编辑器就用AB异步加载
     //无论是true还是false，运行时都是AB异步加载
-    public static bool UseEditorAsset = true;
+    public static bool UseEditorAsset = false;
 
     public void LoadAsset<T>(string packageName, string resName, UnityAction<T> callback, bool isSync = false) where T : Object
     {

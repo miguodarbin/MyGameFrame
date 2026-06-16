@@ -1,0 +1,21 @@
+ManifestFileVersion: 0
+CRC: 611156741
+Hashes:
+  AssetFileHash:
+    serializedVersion: 2
+    Hash: 6ebef0b5fca6b2942825f23dab1343ac
+  TypeTreeHash:
+    serializedVersion: 2
+    Hash: 9a2ca7bdbd1871f7131daf57de908e0c
+  IncrementalBuildHash:
+    serializedVersion: 2
+    Hash: 6ebef0b5fca6b2942825f23dab1343ac
+HashAppended: 0
+ClassTypes:
+- Class: 83
+  Script: {instanceID: 0}
+SerializeReferenceClassIdentifiers: []
+Assets:
+- Assets/Editor/ArtRes/bgm/AMusic.mp3
+- Assets/Editor/ArtRes/bgm/BMusic.mp3
+Dependencies: []

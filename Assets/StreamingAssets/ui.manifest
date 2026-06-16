@@ -1,15 +1,15 @@
 ManifestFileVersion: 0
-CRC: 617977317
+CRC: 562220354
 Hashes:
   AssetFileHash:
     serializedVersion: 2
-    Hash: cf58bab8e93d2902459d3406876b5012
+    Hash: bc0cca2d6d760d69a96f59f3bbc28885
   TypeTreeHash:
     serializedVersion: 2
     Hash: 2d8df09e698f722ada1caa03d3413830
   IncrementalBuildHash:
     serializedVersion: 2
-    Hash: cf58bab8e93d2902459d3406876b5012
+    Hash: bc0cca2d6d760d69a96f59f3bbc28885
 HashAppended: 0
 ClassTypes:
 - Class: 28
@@ -18,5 +18,5 @@ ClassTypes:
   Script: {instanceID: 0}
 SerializeReferenceClassIdentifiers: []
 Assets:
-- Assets/Editor/ArtRes/100.png
+- Assets/Editor/ArtRes/ui/100.png
 Dependencies: []

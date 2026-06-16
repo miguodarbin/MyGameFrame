@@ -59,6 +59,7 @@ public class XEditorAssetManager : XSingletonCSharp<XEditorAssetManager>
             assetSuffix = ".mp3";
         }
 
+
         var asset = AssetDatabase.LoadAssetAtPath<T>(_rootPath + assetName + assetSuffix);
         if (asset == null)
         {

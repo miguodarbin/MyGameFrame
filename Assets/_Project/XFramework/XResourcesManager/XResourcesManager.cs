@@ -61,6 +61,9 @@ public class XAssetLoadAsyncAsyncInfo<T> : XAssetLoadAsyncInfoBase
 ///  <item>
 /// 外部只负责“用的时候 Load，不用的时候 Unload”，不要关心资源是否已经加载过
 /// </item>
+/// <item>
+/// assetName的示例:"UIPrefabs/UICamera"
+/// </item>
 /// </list>
 /// </remarks>
 public class XResourcesManager : XSingletonCSharp<XResourcesManager>
