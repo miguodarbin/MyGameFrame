@@ -1,54 +1,37 @@
-using System;
-using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
-using UnityEngine.UI;
 
-public class Example_MVC_CountController : MonoBehaviour
+public class Example_MVC_CountController : XUIPanelController<Example_MVC_CountPanelView, Example_MVC_CountModel>
 {
-    //作为中间人，理应持有Model和View
-    private Example_MVC_CountModel _countModel;
-    private Example_MVC_CountPanelView _countPanelView;
-
-
-    //初始化Model 和 View
-    private void Awake()
+    protected override void SubscribeInteractionChanges()
     {
-        _countModel = new Example_MVC_CountModel();
-        _countPanelView = GetComponent<XUIPanelView>() as Example_MVC_CountPanelView;
-        BindInteractiveEvents();
+        PanelView.CloseButton.onClick.AddListener(OnCloseButtonClicked);
+        PanelView.ResetButton.onClick.AddListener(OnResetButtonClicked);
+        PanelView.AddButton.onClick.AddListener(OnAddButtonClicked);
+        PanelView.SubButton.onClick.AddListener(OnSubButtonClicked);
     }
 
-    //订阅事件
-    private void OnEnable()
+    protected override void UnSubscribeInteractionEvents()
     {
-        _countModel.onCountChanged += OnModelValueChanged;
+        PanelView.CloseButton.onClick.RemoveListener(OnCloseButtonClicked);
+        PanelView.ResetButton.onClick.RemoveListener(OnResetButtonClicked);
+        PanelView.AddButton.onClick.RemoveListener(OnAddButtonClicked);
+        PanelView.SubButton.onClick.RemoveListener(OnSubButtonClicked);
     }
 
-    private void OnDisable()
+    protected override void SubscribeModelChanges()
     {
-        _countModel.onCountChanged -= OnModelValueChanged;
+        PanelModel.onCountChanged += RefreshView;
     }
 
-    private void Start()
+    protected override void UnSubscribeModelChanges()
     {
-        _countPanelView.RefreshUI(_countModel);
+        PanelModel.onCountChanged -= RefreshView;
     }
 
-    //作为中间人，传递 Model的修改，以更新UI
-    private void OnModelValueChanged(Example_MVC_CountModel model)
+    protected override void RefreshView(Example_MVC_CountModel model)
     {
-        _countPanelView.RefreshUI(model);
+        PanelView.RefreshUI(model);
     }
 
-    //作为控制层，负责监听UI交互事件，并把交互事件期望发生的数据逻辑交给Model，面板逻辑交给UIManager，其他逻辑交给自己
-    public void BindInteractiveEvents()
-    {
-        _countPanelView.CloseButton.onClick.AddListener(OnCloseButtonClicked);
-        _countPanelView.ResetButton.onClick.AddListener(OnResetButtonClicked);
-        _countPanelView.AddButton.onClick.AddListener(OnAddButtonClicked);
-        _countPanelView.SubButton.onClick.AddListener(OnSubButtonClicked);
-    }
 
     public void OnCloseButtonClicked()
     {
@@ -57,16 +40,16 @@ public class Example_MVC_CountController : MonoBehaviour
 
     public void OnResetButtonClicked()
     {
-        _countModel.ResetCount();
+        PanelModel.ResetCount();
     }
 
     public void OnAddButtonClicked()
     {
-        _countModel.AddCount();
+        PanelModel.AddCount();
     }
 
     public void OnSubButtonClicked()
     {
-        _countModel.SubCount();
+        PanelModel.SubCount();
     }
 }

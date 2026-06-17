@@ -12,16 +12,10 @@ public class Example_MVC_CountData
 public class Example_MVC_CountModel
 {
     private const string _jsonName = "Example_MVC_Count.json";
-    public UnityAction<Example_MVC_CountModel> onCountChanged;
+    public event UnityAction<Example_MVC_CountModel> onCountChanged;
 
     //CountPanel 管理的数据：
-    private int _count = 0;
-
-    public int Count
-    {
-        get { return _count; }
-        set { _count = value; }
-    }
+    public int Count { get; private set; }
 
 
     //初始化Model数据

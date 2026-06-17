@@ -326,6 +326,27 @@ public class XUIManager : XSingletonCSharp<XUIManager>
         }
     }
 
+
+    //获得面板的Controller，内部原理是先靠已经写好的GetPanel拿到Panel再拿到Controller
+    public void GetPanelController<TView, TController>(UnityAction<TController> callback)
+        where TView : XUIPanelView
+        where TController : MonoBehaviour
+    {
+        GetPanel<TView>((panelView) =>
+        {
+            var controller = panelView.GetComponent<TController>();
+
+            if (controller == null)
+            {
+                Debug.LogError($"{panelView.gameObject.name} 上没有挂载 {typeof(TController).Name}");
+                return;
+            }
+
+            callback?.Invoke(controller);
+        });
+    }
+
+
     //提供一个静态函数，方便各个面板快速的添加自定义交互事件
     public static void AddCustomEventTrigger(UIBehaviour control, EventTriggerType interactionType, UnityAction<BaseEventData> callback)
     {
