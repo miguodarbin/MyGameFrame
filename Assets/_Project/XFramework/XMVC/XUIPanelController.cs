@@ -40,12 +40,12 @@ public abstract class XUIPanelController<TView, TModel> : MonoBehaviour
     }
 
     //初始化时机
-    protected  void Awake()
+    protected void Awake()
     {
         Init();
     }
 
-    //订阅事件
+    //订阅事件、调用子类的Show
     protected void OnEnable()
     {
         if (!_isInit)
@@ -55,10 +55,11 @@ public abstract class XUIPanelController<TView, TModel> : MonoBehaviour
 
         SubscribeInteractionChanges();
         SubscribeModelValueChanges();
+        OnPanelControllerShow();
         RefreshView(PanelModel);
     }
 
-    //解绑事件
+    //解绑事件、调用子类的Hide
     protected void OnDisable()
     {
         if (!_isInit)
@@ -68,6 +69,7 @@ public abstract class XUIPanelController<TView, TModel> : MonoBehaviour
 
         UnSubscribeInteractionEvents();
         UnSubscribeModelValueChanges();
+        OnPanelControllerHide();
     }
 
 
@@ -84,4 +86,16 @@ public abstract class XUIPanelController<TView, TModel> : MonoBehaviour
 
     //Controller必须提供刷新UI方法，用于Controller开启的时候刷新 UI
     protected abstract void RefreshView(TModel model);
+
+    
+    //TODO：之后看需求会不会出现需要子类在Awake里写逻辑，目前不需要
+    
+    //提供给子类一个激活失活的生命周期的写逻辑，然后在父类里调
+    protected virtual void OnPanelControllerShow()
+    {
+    }
+
+    protected virtual void OnPanelControllerHide()
+    {
+    }
 }

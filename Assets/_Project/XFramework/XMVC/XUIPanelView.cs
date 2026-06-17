@@ -51,7 +51,7 @@ public class XUIPanelView : MonoBehaviour
     };
 
 
-    //Panel下，Awake的时候就去读取自己所有继承了UIBehaviour的子控件
+    //Panel下，Awake的时候就去读取自己所有继承了UIBehaviour的子控件,而且也要调用子类写的初始化
     //如果一个同名GameObject有多个UI控件，按这里的先后顺序决定绑定优先级，决定这个GameObject的Name用哪个UI控件对应为它的Value
     protected virtual void Awake()
     {
@@ -74,6 +74,8 @@ public class XUIPanelView : MonoBehaviour
         FindAllUIControls<Scrollbar>(); //滚动条
         FindAllUIControls<Dropdown>(); //下拉菜单
         FindAllUIControls<Text>(); //过时的文字
+
+        InitPanelView();
     }
 
 
@@ -128,6 +130,12 @@ public class XUIPanelView : MonoBehaviour
 
     //面板被隐藏时调用：只做View自己的清理、动画、状态重置，不做SetActive，XUIManager 统一负责SetActive
     public virtual void OnPanelViewHide()
+    {
+    }
+
+
+    //提供一个方法给子类作为初始化逻辑用
+    protected virtual void InitPanelView()
     {
     }
 }
