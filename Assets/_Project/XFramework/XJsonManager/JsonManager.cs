@@ -29,7 +29,7 @@ public enum SerializePath
 /// <description><c> JsonToObj </c>：将Json反序列化为对象 </description>
 /// </item>
 /// <item>
-/// <description><c> 外部给Json命就好，不要加斜杠 </c>：</description>
+/// <description><c> 外部给Json命就好，不要加斜杠,外部需要给Json加后缀</c>：</description>
 /// </item>
 /// </list>
 /// </remarks>
@@ -54,11 +54,11 @@ public class JsonManager
         {
             case SerializeType.LitJson:
                 string dataJsonMapper = JsonMapper.ToJson(obj);
-                File.WriteAllText(dataPath + "/" + fileName + ".json", dataJsonMapper);
+                File.WriteAllText(dataPath + "/" + fileName, dataJsonMapper);
                 break;
             case SerializeType.JsonUtility:
                 string dataJsonUtility = JsonUtility.ToJson(obj);
-                File.WriteAllText(dataPath + "/" + fileName + ".json", dataJsonUtility);
+                File.WriteAllText(dataPath + "/" + fileName, dataJsonUtility);
                 break;
         }
     }
@@ -67,13 +67,13 @@ public class JsonManager
     {
         string dataPath = JudgePath(path);
 
-        if (!File.Exists(dataPath + "/" + fileName + ".json"))
+        if (!File.Exists(dataPath + "/" + fileName))
         {
             Debug.Log("json file doesn't exist");
             return default(T);
         }
 
-        string json = File.ReadAllText(dataPath + "/" + fileName + ".json");
+        string json = File.ReadAllText(dataPath + "/" + fileName);
 
         T obj = default(T);
         switch (type)
