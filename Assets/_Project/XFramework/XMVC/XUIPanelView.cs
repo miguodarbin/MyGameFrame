@@ -31,6 +31,9 @@ using Toggle = UnityEngine.UI.Toggle;
 /// <item>
 /// <description>子类如果重写 Awake，必须先调用 base.Awake()，否则不会自动收集UI控件！！</description>
 /// </item>
+/// <item>
+/// <description>子类需要自己去声明公开控件，以让Controller订阅交互事件！！</description>
+/// </item>
 /// </list>
 /// </remarks>
 public class XUIPanelView : MonoBehaviour

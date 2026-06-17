@@ -40,13 +40,13 @@ public abstract class XUIPanelController<TView, TModel> : MonoBehaviour
     }
 
     //初始化时机
-    protected virtual void Awake()
+    protected  void Awake()
     {
         Init();
     }
 
     //订阅事件
-    protected virtual void OnEnable()
+    protected void OnEnable()
     {
         if (!_isInit)
         {
@@ -54,12 +54,12 @@ public abstract class XUIPanelController<TView, TModel> : MonoBehaviour
         }
 
         SubscribeInteractionChanges();
-        SubscribeModelChanges();
+        SubscribeModelValueChanges();
         RefreshView(PanelModel);
     }
 
     //解绑事件
-    protected virtual void OnDisable()
+    protected void OnDisable()
     {
         if (!_isInit)
         {
@@ -67,7 +67,7 @@ public abstract class XUIPanelController<TView, TModel> : MonoBehaviour
         }
 
         UnSubscribeInteractionEvents();
-        UnSubscribeModelChanges();
+        UnSubscribeModelValueChanges();
     }
 
 
@@ -77,9 +77,9 @@ public abstract class XUIPanelController<TView, TModel> : MonoBehaviour
     protected abstract void UnSubscribeInteractionEvents();
 
 
-    protected abstract void SubscribeModelChanges();
+    protected abstract void SubscribeModelValueChanges();
 
-    protected abstract void UnSubscribeModelChanges();
+    protected abstract void UnSubscribeModelValueChanges();
 
 
     //Controller必须提供刷新UI方法，用于Controller开启的时候刷新 UI

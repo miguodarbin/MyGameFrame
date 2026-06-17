@@ -1,5 +1,5 @@
 
-public class Example_MVC_CountController : XUIPanelController<Example_MVC_CountPanelView, Example_MVC_CountModel>
+public class Example_MVC_CountPanelController : XUIPanelController<Example_MVC_CountPanelView, Example_MVC_CountModel>
 {
     protected override void SubscribeInteractionChanges()
     {
@@ -17,12 +17,12 @@ public class Example_MVC_CountController : XUIPanelController<Example_MVC_CountP
         PanelView.SubButton.onClick.RemoveListener(OnSubButtonClicked);
     }
 
-    protected override void SubscribeModelChanges()
+    protected override void SubscribeModelValueChanges()
     {
         PanelModel.onCountChanged += RefreshView;
     }
 
-    protected override void UnSubscribeModelChanges()
+    protected override void UnSubscribeModelValueChanges()
     {
         PanelModel.onCountChanged -= RefreshView;
     }
