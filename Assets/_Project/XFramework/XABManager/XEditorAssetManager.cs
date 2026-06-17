@@ -34,7 +34,7 @@ public class XEditorAssetManager : XSingletonCSharp<XEditorAssetManager>
     }
 
     //强行规定资源必须放在"Assets/Editor/ArtRes/"
-    private string _rootPath = "Assets/Editor/ArtRes/";
+    private string _rootPath = "Assets/Editor/art_assets/";
 
     //1. 加载单个资源
     public T LoadEditorAsset<T>(string assetName) where T : Object

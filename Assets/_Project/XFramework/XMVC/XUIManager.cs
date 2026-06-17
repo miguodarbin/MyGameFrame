@@ -58,7 +58,7 @@ public enum XCustomUILayer
 /// <description>面板预设体名、面板的GameObject 名、面板脚本类名必须一致 </description>
 /// </item>
 /// <item>
-/// <description>面板预设体放在 Assets/Editor/ArtRes/ui_prefab 下 </description>
+/// <description>面板预设体放在 Assets/Editor/ArtRes/uiPanel_prefabs 下 </description>
 /// </item>
 /// <item>
 /// <description>每个项目需要按实际分辨率调整Canvas Scaler组件里的参考分辨率和 Screen Match Mode </description>
@@ -86,15 +86,15 @@ public class XUIManager : XSingletonCSharp<XUIManager>
     //在第一次访问到UIManager类的时候，就初始化的时候就创建出UI相关的GameObject
     private XUIManager()
     {
-        var eventSystemPrefab = XResourcesManager.Instance.LoadAsset<GameObject>("UIPrefabs/EventSystem");
+        var eventSystemPrefab = XResourcesManager.Instance.LoadAsset<GameObject>("uiComponent_prefabs/EventSystem");
         _eventSystem = Object.Instantiate(eventSystemPrefab).GetComponent<EventSystem>();
         Object.DontDestroyOnLoad(_eventSystem.gameObject);
 
-        var uiCameraPrefab = XResourcesManager.Instance.LoadAsset<GameObject>("UIPrefabs/UICamera");
+        var uiCameraPrefab = XResourcesManager.Instance.LoadAsset<GameObject>("uiComponent_prefabs/UICamera");
         _uiCamera = Object.Instantiate(uiCameraPrefab).GetComponent<Camera>();
         Object.DontDestroyOnLoad(_uiCamera.gameObject);
 
-        var canvasPrefab = XResourcesManager.Instance.LoadAsset<GameObject>("UIPrefabs/Canvas");
+        var canvasPrefab = XResourcesManager.Instance.LoadAsset<GameObject>("uiComponent_prefabs/Canvas");
         _canvas = Object.Instantiate(canvasPrefab).GetComponent<Canvas>();
         _canvas.worldCamera = _uiCamera;
         Object.DontDestroyOnLoad(_canvas.gameObject);
@@ -191,7 +191,7 @@ public class XUIManager : XSingletonCSharp<XUIManager>
             _uiPanels.Add(panelType, panelLoadInfo);
 
             //然后开始异步加载
-            XABUnifiedManager.Instance.LoadAsset<GameObject>("ui_prefab", panelType.Name, (result) =>
+            XABUnifiedManager.Instance.LoadAsset<GameObject>("uiPanel_prefabs", panelType.Name, (result) =>
             {
                 //看看有没有把资源加载成功
                 if (result == null)

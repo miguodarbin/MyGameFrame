@@ -1,0 +1,29 @@
+ManifestFileVersion: 0
+CRC: 1162077451
+Hashes:
+  AssetFileHash:
+    serializedVersion: 2
+    Hash: 77d87525f4253e184a714f0d3c6a660b
+  TypeTreeHash:
+    serializedVersion: 2
+    Hash: 2d8df09e698f722ada1caa03d3413830
+  IncrementalBuildHash:
+    serializedVersion: 2
+    Hash: 77d87525f4253e184a714f0d3c6a660b
+HashAppended: 0
+ClassTypes:
+- Class: 28
+  Script: {instanceID: 0}
+- Class: 213
+  Script: {instanceID: 0}
+SerializeReferenceClassIdentifiers: []
+Assets:
+- Assets/Editor/art_asset/ui_sprites/example_sprite_countpanel/example_sprite_button_sub.png
+- Assets/Editor/art_asset/ui_sprites/example_sprite_countpanel/example_sprite_button_add.png
+- Assets/Editor/art_asset/ui_sprites/example_sprite_countpanel/example_sprite_image_windowBg.png
+- Assets/Editor/art_asset/ui_sprites/example_sprite_countpanel/example_sprite_button_reset.png
+- Assets/Editor/art_asset/ui_sprites/example_sprite_countpanel/example_sprite_image_titleBg.png
+- Assets/Editor/art_asset/ui_sprites/example_sprite_countpanel/example_sprite_image_tipsBg.png
+- Assets/Editor/art_asset/ui_sprites/example_sprite_countpanel/example_sprite_image_countBg.png
+- Assets/Editor/art_asset/ui_sprites/example_sprite_countpanel/example_sprite_button_close.png
+Dependencies: []
