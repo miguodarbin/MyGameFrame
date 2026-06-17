@@ -6,16 +6,5 @@ using UnityEngine.UI;
 
 public class TestMain : MonoBehaviour
 {
-    private void Start()
-    {
-        XUIManager.Instance.ShowPanel<GamePanel>(XCustomUILayer.E_Top);
-    }
 
-    private void Update()
-    {
-        if (Input.GetKeyDown(KeyCode.Space))
-        {
-            XUIManager.Instance.HidePanel<GamePanel>();
-        }
-    }
 }
