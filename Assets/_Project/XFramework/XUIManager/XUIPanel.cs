@@ -16,10 +16,10 @@ using Toggle = UnityEngine.UI.Toggle;
 /// 对外接口：
 /// <list type="number">
 /// <item>
-/// <description><c> ShowMe()</c>：显示当前面板</description>
+/// <description><c> OnPanelEnable()</c>：启动面板时逻辑</description>
 /// </item>
 /// <item>
-///  <description><c> HideMe()</c>：隐藏当前面板</description>
+///  <description><c> OnPanelDisable()</c>：关闭面板逻辑</description>
 /// </item>
 /// <item>
 ///  <description><c>子类GetUIControl&lt;T&gt;(string controlName) </c>：根据控件GameObject名字获取指定类型的UI控件</description>
@@ -141,13 +141,14 @@ public class XUIPanel : MonoBehaviour
     }
 
 
-    //显示和隐藏面板
-    public virtual void ShowMe()
+    //启动面板时逻辑
+    public virtual void OnPanelEnable()
     {
         this.gameObject.SetActive(true);
     }
-
-    public virtual void HideMe()
+    
+    //关闭面板逻辑
+    public virtual void OnPanelDisable()
     {
         this.gameObject.SetActive(false);
     }

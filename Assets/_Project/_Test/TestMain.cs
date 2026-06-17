@@ -13,5 +13,9 @@ public class TestMain : MonoBehaviour
 
     private void Update()
     {
+        if (Input.GetKeyDown(KeyCode.Space))
+        {
+            XUIManager.Instance.HidePanel<GamePanel>();
+        }
     }
 }

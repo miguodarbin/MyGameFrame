@@ -1,5 +1,4 @@
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Events;
@@ -11,6 +10,7 @@ using Object = UnityEngine.Object;
 //所有面板的脚本名字必须要和面板GameObject的名字一致！
 //panel是组件，不是GameObject！
 
+
 public class XPanelLoadInfoBase
 {
 }
@@ -20,6 +20,7 @@ public class XPanelLoadInfo<T> : XPanelLoadInfoBase where T : XUIPanel
     public T panel = null;
     public UnityAction<T> callback = null;
     public bool isNeedHide = false;
+    public bool isNeedDestroy = false;
 }
 
 
@@ -32,6 +33,41 @@ public enum XCustomUILayer
 }
 
 
+/// <summary>
+/// 职责：管理Panel的生命周期，负责加载、缓存、显示、隐藏 Panel，快速添加EventTrigger
+/// </summary>
+/// <remarks>
+/// 对外接口：
+/// <list type="number">
+/// <item>
+///  <description><c>ShowPanel&lt;T&gt;() </c>：显示 / 加载面板,泛型填panel类型 </description>
+/// </item>
+///  <item>
+///  <description><c>HidePanel&lt;T&gt;() </c>：隐藏或销毁面板 </description>
+/// </item>
+///  <item>
+///  <description><c>GetPanel&lt;T&gt;() </c>：获取已经显示或正在加载中的面板</description>
+/// </item>
+///  <item>
+///  <description><c> AddCustomEventTrigger()</c>： 给 UI 控件快速添加 EventTrigger 交互事件</description>
+/// </item>
+/// <item>
+/// <description>所有面板脚本必须继承 XUIPanel</description>
+/// </item>
+/// <item>
+/// <description>面板预设体名、面板的GameObject 名、面板脚本类名必须一致 </description>
+/// </item>
+/// <item>
+/// <description>面板预设体放在 Assets/Editor/ArtRes/ui_prefab 下 </description>
+/// </item>
+/// <item>
+/// <description>每个项目需要按实际分辨率调整Canvas Scaler组件里的参考分辨率和 Screen Match Mode </description>
+/// </item>
+/// <item>
+/// <description>注意主摄像机的就不要渲染UI了 </description>
+/// </item>
+/// </list>
+/// </remarks>
 public class XUIManager : XSingletonCSharp<XUIManager>
 {
     //缓存的关键组件，会自动创建
@@ -129,13 +165,21 @@ public class XUIManager : XSingletonCSharp<XUIManager>
             {
                 //如果隐藏了没从字典移出，那之后Show请求都会带着脏的isNeedHide，所以不管咋样，这里重置isNeedHide总没错
                 panelLoadInfo.isNeedHide = false;
+                panelLoadInfo.isNeedDestroy = false;
                 panel.transform.SetParent(layerTransform, false);
-                panel.ShowMe();
+
+                if (!panel.gameObject.activeSelf)
+                {
+                    panel.gameObject.SetActive(true);
+                }
+
+                panel.OnPanelEnable();
                 callback?.Invoke(panel);
             }
             else //没值的话，就把这次异步请求的回调拿下，等异步加载完调
             {
                 panelLoadInfo.isNeedHide = false;
+                panelLoadInfo.isNeedDestroy = false;
                 panelLoadInfo.callback += callback;
             }
         }
@@ -156,9 +200,9 @@ public class XUIManager : XSingletonCSharp<XUIManager>
                     _uiPanels.Remove(panelType);
                     return;
                 }
-                
-                //等panel加载完毕，就要出处理 隐藏有隐藏标记的panel，而且还要把这次异步加载请求的回调也删掉，要不然后面继续执行回调就不符合逻辑
-                if (panelLoadInfo.isNeedHide)
+
+                //等panel加载完毕，先看看要不要销毁，如果要销毁这里就不缓存了
+                if (panelLoadInfo.isNeedHide && panelLoadInfo.isNeedDestroy)
                 {
                     panelLoadInfo.callback = null;
                     _uiPanels.Remove(panelType);
@@ -180,8 +224,18 @@ public class XUIManager : XSingletonCSharp<XUIManager>
                 panelLoadInfo.panel = panel;
 
 
+                //如果只是隐藏，不销毁，那就只是隐藏
+                if (panelLoadInfo.isNeedHide)
+                {
+                    panel.OnPanelDisable();
+                    panel.gameObject.SetActive(false);
+                    panelLoadInfo.callback = null;
+                    return;
+                }
+
+
                 //然后把面板显示出来
-                panel.ShowMe();
+                panel.OnPanelEnable();
 
                 //然后收一下尾，触发回调、置空
 
@@ -193,7 +247,9 @@ public class XUIManager : XSingletonCSharp<XUIManager>
 
 
     //隐藏并删除面板
-    public void HidePanel<T>() where T : XUIPanel
+    //如果每次都不是销毁，只是失活，就会占内存，但不会产生垃圾，适合开启关闭频繁的轻量弹窗
+    //如果每次都是销毁，频繁开关就会产生垃圾，但可以降低常驻内存压力，适合低频、临时，内存大的弹窗
+    public void HidePanel<T>(bool isDestroy = false) where T : XUIPanel
     {
         var panelType = typeof(T);
         if (!_uiPanels.ContainsKey(panelType))
@@ -212,13 +268,24 @@ public class XUIManager : XSingletonCSharp<XUIManager>
         if (panelLoadInfo.panel == null) //有记录了，但还没值,等加载完再处理Hide逻辑，这里就只把加载信息里的Hide标记打开，到时候加载完的回调判断一下，如果有Hide标记，就帮我这里完成Hide逻辑
         {
             panelLoadInfo.isNeedHide = true;
+            panelLoadInfo.isNeedDestroy = isDestroy;
             panelLoadInfo.callback = null;
         }
         else //有记录了，也有值了
         {
-            panelLoadInfo.panel.HideMe();
-            Object.Destroy(panelLoadInfo.panel.gameObject);
-            _uiPanels.Remove(panelType);
+            if (isDestroy) //销毁的话，就销毁对象，从字典移除
+            {
+                panelLoadInfo.panel.OnPanelDisable();
+                Object.Destroy(panelLoadInfo.panel.gameObject);
+                _uiPanels.Remove(panelType);
+            }
+            else //否则就失活
+            {
+                panelLoadInfo.isNeedHide = true;
+                panelLoadInfo.isNeedDestroy = false;
+                panelLoadInfo.panel.OnPanelDisable();
+                panelLoadInfo.panel.gameObject.SetActive(false);
+            }
         }
     }
 
@@ -245,6 +312,7 @@ public class XUIManager : XSingletonCSharp<XUIManager>
             {
                 return;
             }
+
             panelLoadInfo.callback += callback; //还没加载完，就让这次请求的回调交给加载完一起调用吧，反正加载完一起调用的那个总回调也是提供这个panel面板对象
         }
         else
@@ -256,5 +324,20 @@ public class XUIManager : XSingletonCSharp<XUIManager>
 
             callback?.Invoke(panelLoadInfo.panel);
         }
+    }
+
+    //提供一个静态函数，方便各个面板快速的添加自定义交互事件
+    public static void AddCustomEventTrigger(UIBehaviour control, EventTriggerType interactionType, UnityAction<BaseEventData> callback)
+    {
+        var eventTrigger = control.GetComponent<EventTrigger>();
+        if (eventTrigger == null)
+        {
+            eventTrigger = control.gameObject.AddComponent<EventTrigger>();
+        }
+
+        EventTrigger.Entry entry = new EventTrigger.Entry();
+        entry.eventID = interactionType;
+        entry.callback.AddListener(callback);
+        eventTrigger.triggers.Add(entry);
     }
 }
