@@ -75,6 +75,8 @@ public class Example_MVC_CountPanelController : XUIPanelController<Example_MVC_C
     private Vector2 _totalOffset = Vector2.zero;
     private Vector2 _threshold = new Vector2(0.2f, 0.2f);
 
+    private Tween _tween;
+
 
     public void OnDragingArea(BaseEventData eventData)
     {
@@ -87,7 +89,7 @@ public class Example_MVC_CountPanelController : XUIPanelController<Example_MVC_C
             windowRect.anchoredPosition += data.delta;
         }
     }
-    
+
     public void OnDragAreaEndDrag(BaseEventData eventData)
     {
         //先得到根物体，是mask和window的根
@@ -119,7 +121,12 @@ public class Example_MVC_CountPanelController : XUIPanelController<Example_MVC_C
         windowAnchoredPos.y = Mathf.Clamp(windowAnchoredPos.y, minY, maxY);
 
         //重新赋值
-        windowRect.DOAnchorPos(windowAnchoredPos, 0.2f).SetEase(Ease.OutBack);
+        _tween = windowRect.DOAnchorPos(windowAnchoredPos, 0.2f).SetEase(Ease.OutBack);
+    }
+
+    protected override void OnPanelControllerHide()
+    {
+        _tween?.Kill();
     }
 
     private Vector2 GetRectSizeInParent(RectTransform sonRect, RectTransform parentRect)
