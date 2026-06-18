@@ -3,5 +3,6 @@
 /// </summary>
 public enum XEventType
 {
-    E_Example
+    E_SceneLoadProgress,
+    E_SceneLoadSucess
 }
