@@ -97,6 +97,12 @@ public class XUIPanelView : MonoBehaviour
             {
                 continue;
             }
+            
+            //如果字符串中有(Clone)那就删掉
+            if (control.gameObject.name.EndsWith("(Clone)"))
+            {
+                control.gameObject.name = control.gameObject.name.Substring(0, name.Length - "(Clone)".Length);
+            }
 
             //添加到字典进行管理
             _uiDict.Add(control.gameObject.name, control);

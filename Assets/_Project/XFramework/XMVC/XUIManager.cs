@@ -222,7 +222,8 @@ public class XUIManager : XSingletonCSharp<XUIManager>
 
                 //加载完毕，就记录到字典的value里面
                 panelLoadInfo.panel = panel;
-
+                panelLoadInfo.panel.name = typeof(T).Name;
+               
 
                 //如果只是隐藏，不销毁，那就只是隐藏
                 if (panelLoadInfo.isNeedHide)

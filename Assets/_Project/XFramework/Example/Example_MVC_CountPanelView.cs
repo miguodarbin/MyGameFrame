@@ -17,11 +17,16 @@ public class Example_MVC_CountPanelView : XUIPanelView
     public Button ResetButton => GetUIControl<Button>("ResetButton");
     public Button CloseButton => GetUIControl<Button>("CloseButton");
     private Image DragArea => GetUIControl<Image>("DragArea");
+    public Image Window => GetUIControl<Image>("WindowBG");
+    public Image Mask => GetUIControl<Image>("Mask");
+    public Image Root => GetUIControl<Image>("Example_MVC_CountPanelView");
+
 
     //自定义交互事件
-    public EventTrigger.Entry OnBeginDrag;
+    public EventTrigger.Entry OnDraging;
     public EventTrigger.Entry OnEndDrag;
 
+    //初始化View的时候调用
     protected override void InitPanelView()
     {
         //为DragArea添加自定义拖动事件
@@ -31,12 +36,12 @@ public class Example_MVC_CountPanelView : XUIPanelView
             eventTrigger = DragArea.gameObject.AddComponent<EventTrigger>();
         }
 
-        OnBeginDrag = new EventTrigger.Entry();
-        OnBeginDrag.eventID = EventTriggerType.BeginDrag;
+        OnDraging = new EventTrigger.Entry();
+        OnDraging.eventID = EventTriggerType.Drag;
 
         OnEndDrag = new EventTrigger.Entry();
         OnEndDrag.eventID = EventTriggerType.EndDrag;
-        eventTrigger.triggers.Add(OnBeginDrag);
+        eventTrigger.triggers.Add(OnDraging);
         eventTrigger.triggers.Add(OnEndDrag);
     }
 
