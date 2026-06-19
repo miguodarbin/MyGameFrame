@@ -196,7 +196,7 @@ public class XSnapScrollRect : MonoBehaviour
         contentAnchoredPos.x += _itemToPerfectOffsetXDict[index];
         if (useTween)
         {
-            _tween = contentRect.DOAnchorPos(contentAnchoredPos, 0.5f).SetEase(Ease.OutBack);
+            _tween = contentRect.DOAnchorPos(contentAnchoredPos, 0.2f).SetEase(Ease.OutCubic);
         }
         else
         {
@@ -211,7 +211,6 @@ public class XSnapScrollRect : MonoBehaviour
         //这个方法主要是算出离perfect最近的Item的索引号
 
         float minItemToPerfectDistance = 999999; //遍历完得到的这个最小 item 离 perfect 的距离，再给到 content，就能完成吸附了
-        float minItemToPerfectOffsetX = 0; //刚才只是算的距离不是偏移，重新算一下带方向的偏移
         int closedItemIndex = -1; //本次拖拽的，算出来离 perfect 最近的 item的索引号
 
         if (itemList.Count == 0)
@@ -229,7 +228,6 @@ public class XSnapScrollRect : MonoBehaviour
             if (itemToPerfectDistance < minItemToPerfectDistance)
             {
                 minItemToPerfectDistance = itemToPerfectDistance;
-                minItemToPerfectOffsetX = itemToPerfectOffsetX;
                 closedItemIndex = i;
             }
         }
@@ -296,16 +294,18 @@ public class XSnapScrollRect : MonoBehaviour
      * 首先要得到场上的全部item的中心点
      * 然后还要得到perfect的中心点
      * 然后遍历全部的item：
-     *  - 判断这个item的中心点距离perfect的中心点的距离，
-     *    -如果距离大于了影响范围，那就把缩放控制为one
-     *    -如果距离小于了影响范围，那就要控制缩放了，缩放规则是离item的中心点越近，缩放越大，放到最大是1.2
-     *      --我需要想一个映射关系，也就是说距离越近，缩放乘以的系数越大，缩放系数 = 最大缩放 - distance/1000
+     *  -因为距离越小，想越大，所以需要一个映射关系，比如weight，当距离大于阈值的时候，weight是0，当距离小于阈值的时候，weight从0变化到1
+     *   ## weight = 1 - (距离/影响距离),这个关系式是核心，当距离超过影响距离的时候，weight就会变为0，当距离为0时，权重最大
+     *  得到权重之后，柔化一下权重，weight = SmoothStep(0,1,weight)这行代码的语义就是说：在0到1这个变化过程中，我传进去了一个归一化的线性变化进度weight，给我一个这个线性变化进度的柔化版本weight，也是代表从0到1的进度点，但这个进度点是柔性变化点
+     *  算出根据权重进度得到的目标缩放进度
+     *  然后把这个目标缩放进度给到item的缩放
      *  以上说的所有计算都是在父空间完成的
      */
     [Header("ScaleController")] public float scaleAffectedArea = 300f;
-    public float rateOfScale = 1000f;
 
-    public float maxScale = 1.2f;
+    public float maxScaleFactor = 1.2f; //最大缩放系数
+    public float normalScaleFactor = 1f; //普通缩放系数
+    public float scaleSpeed = 10;
 
     private void ControlSelectedAreaItemSize()
     {
@@ -316,20 +316,27 @@ public class XSnapScrollRect : MonoBehaviour
             var itemToPerfectOffsetX = _perfectCenter.x - itemCenter.x; //偏移量
             var itemToPerfectDistance = Mathf.Abs(itemToPerfectOffsetX); //距离
 
-            if (itemToPerfectDistance > scaleAffectedArea) //如果距离大于了影响范围，那就把缩放控制为one
-            {
-                itemRect.localScale = Vector3.one;
-            }
-            else //如果距离小于了影响范围
-            {
-                var scaleFactor = maxScale - (itemToPerfectDistance / rateOfScale);
-                scaleFactor = Mathf.Clamp(scaleFactor, 1, maxScale);
-                itemRect.localScale = Vector3.one * scaleFactor;
-            }
+            //将距离关系抽象成一个进度，之后拿这个进度去描述从normalScale变化成maxScale就行了
+            var progress = 1 - (itemToPerfectDistance / scaleAffectedArea);
+
+            //归一化进度
+            progress = Mathf.Clamp01(progress);
+
+            //将线性进度，柔化成柔性进度。并用来描述从normalScale到maxScale 缩放系数的变化进度,得到目标缩放系数
+            var targetScaleFactor = Mathf.SmoothStep(normalScaleFactor, maxScaleFactor, progress);
+
+            //从当前的缩放，插值到目标的缩放。
+            //Lerp的第三个参数的含义是：从 current 到 target 这段“当前剩余距离”里，每一帧走百分之多少？走多少，结果可以抽象成路程，这个路程是不能超过1的，时间差不多每帧是0.016，换算一下速度是大概不能超过60的，把速度抛给外部处理吧
+            //也就是说，这个参数要外部定，
+            var currentScale = itemRect.localScale;
+            currentScale = Vector3.Lerp(currentScale, targetScaleFactor * Vector3.one, Time.deltaTime * scaleSpeed);
+
+            //最后对item的Scale赋值
+            itemRect.localScale = currentScale;
         }
     }
 
-    private void FixedUpdate()
+    private void Update()
     {
         ControlSelectedAreaItemSize();
     }
