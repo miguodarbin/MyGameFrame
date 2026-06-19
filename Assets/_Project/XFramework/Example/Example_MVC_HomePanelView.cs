@@ -5,5 +5,5 @@ using UnityEngine.UI;
 
 public class Example_MVC_HomePanelView : XUIPanelView
 {
-    public Button CountPanelButton => GetUIControl<Button>("CountButton");
+   
 }

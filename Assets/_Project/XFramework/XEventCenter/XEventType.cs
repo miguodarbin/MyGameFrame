@@ -4,5 +4,6 @@
 public enum XEventType
 {
     E_SceneLoadProgress,
-    E_SceneLoadSucess
+    E_SceneLoadSucess,
+    E_GetAllEntryItems
 }

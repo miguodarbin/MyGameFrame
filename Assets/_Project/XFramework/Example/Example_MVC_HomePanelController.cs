@@ -6,12 +6,12 @@ public class Example_MVC_HomePanelController : XUIPanelController<Example_MVC_Ho
 {
     protected override void SubscribeInteractionChanges()
     {
-        PanelView.CountPanelButton.onClick.AddListener(OnCountPanelButtonClick);
+        
     }
 
     protected override void UnSubscribeInteractionEvents()
     {
-        PanelView.CountPanelButton.onClick.RemoveListener(OnCountPanelButtonClick);
+        
     }
 
     protected override void SubscribeModelValueChanges()

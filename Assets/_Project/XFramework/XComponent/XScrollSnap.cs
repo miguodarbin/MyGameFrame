@@ -33,10 +33,7 @@ public class XScrollSnap : MonoBehaviour
 
     private RectTransform ContentParentRect
     {
-        get
-        {
-            return content.parent as RectTransform;
-        }
+        get { return content.parent as RectTransform; }
     }
 
     private void Awake()
@@ -67,7 +64,7 @@ public class XScrollSnap : MonoBehaviour
 
         foreach (Transform child in content.transform)
         {
-            if (child.name.Contains("item"))
+            if (child.name.Contains("Item"))
             {
                 RectTransform childRect = child as RectTransform;
 
@@ -77,6 +74,8 @@ public class XScrollSnap : MonoBehaviour
                 }
             }
         }
+
+        XEventCenter.Instance.EventTrigger<List<RectTransform>>(XEventType.E_GetAllEntryItems, itemList);
     }
 
     private void AddDragEvent()
@@ -288,7 +287,7 @@ public class XScrollSnap : MonoBehaviour
         if (useTween)
         {
             _snapTween?.Kill();
-            _snapTween = content.DOAnchorPos(contentAnchoredPos, 0.5f).SetEase(Ease.OutBack);
+            _snapTween = content.DOAnchorPos(contentAnchoredPos, 0.2f).SetEase(Ease.OutCubic);
         }
         else
         {
