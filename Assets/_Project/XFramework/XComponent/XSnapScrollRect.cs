@@ -26,6 +26,7 @@ public class XSnapScrollRect : MonoBehaviour
     private RectTransform _parentRect; //content 和 perfect的 parent 的 RectTransform
     public List<RectTransform> itemList = new List<RectTransform>(); //识别到的 item
     private int _currentSnapedIndex = -1;
+    private Vector2 _perfectCenter;
 
 
     private Tween _tween; //拿到 tween 对象，在失活的时候kill 掉
@@ -34,6 +35,7 @@ public class XSnapScrollRect : MonoBehaviour
     private void Awake()
     {
         _parentRect = transform as RectTransform;
+        _perfectCenter = GetCenterPointInParent(perfectRect, _parentRect);
         AddDragEvent();
     }
 
@@ -119,7 +121,7 @@ public class XSnapScrollRect : MonoBehaviour
         onEndDragEntry.callback.RemoveListener(OnEndDrag);
     }
 
-    //====================拖拽中的逻辑=======================
+    //====================开始拖拽的逻辑=======================
     private void OnBeginDrag(BaseEventData eventData)
     {
         //开始拖拽的时候就要情况一下字典了,防止脏数据
@@ -208,7 +210,6 @@ public class XSnapScrollRect : MonoBehaviour
     {
         //这个方法主要是算出离perfect最近的Item的索引号
 
-        var perfectCenter = GetCenterPointInParent(perfectRect, _parentRect);
         float minItemToPerfectDistance = 999999; //遍历完得到的这个最小 item 离 perfect 的距离，再给到 content，就能完成吸附了
         float minItemToPerfectOffsetX = 0; //刚才只是算的距离不是偏移，重新算一下带方向的偏移
         int closedItemIndex = -1; //本次拖拽的，算出来离 perfect 最近的 item的索引号
@@ -222,7 +223,7 @@ public class XSnapScrollRect : MonoBehaviour
         {
             var itemRect = itemList[i];
             var itemCenter = GetCenterPointInParent(itemRect, _parentRect); //获得中心
-            var itemToPerfectOffsetX = perfectCenter.x - itemCenter.x; //偏移量
+            var itemToPerfectOffsetX = _perfectCenter.x - itemCenter.x; //偏移量
             var itemToPerfectDistance = Mathf.Abs(itemToPerfectOffsetX); //距离
             _itemToPerfectOffsetXDict.Add(i, itemToPerfectOffsetX); //每一次算的item的偏移量都要记录到字典
             if (itemToPerfectDistance < minItemToPerfectDistance)
@@ -301,7 +302,35 @@ public class XSnapScrollRect : MonoBehaviour
      *      --我需要想一个映射关系，也就是说距离越近，缩放乘以的系数越大，缩放系数 = 最大缩放 - distance/1000
      *  以上说的所有计算都是在父空间完成的
      */
-    public float scaleAffectedArea = 300f;
-    
+    [Header("ScaleController")] public float scaleAffectedArea = 300f;
+    public float rateOfScale = 1000f;
 
+    public float maxScale = 1.2f;
+
+    private void ControlSelectedAreaItemSize()
+    {
+        for (int i = 0; i < itemList.Count; i++)
+        {
+            var itemRect = itemList[i];
+            var itemCenter = GetCenterPointInParent(itemRect, _parentRect); //获得中心
+            var itemToPerfectOffsetX = _perfectCenter.x - itemCenter.x; //偏移量
+            var itemToPerfectDistance = Mathf.Abs(itemToPerfectOffsetX); //距离
+
+            if (itemToPerfectDistance > scaleAffectedArea) //如果距离大于了影响范围，那就把缩放控制为one
+            {
+                itemRect.localScale = Vector3.one;
+            }
+            else //如果距离小于了影响范围
+            {
+                var scaleFactor = maxScale - (itemToPerfectDistance / rateOfScale);
+                scaleFactor = Mathf.Clamp(scaleFactor, 1, maxScale);
+                itemRect.localScale = Vector3.one * scaleFactor;
+            }
+        }
+    }
+
+    private void FixedUpdate()
+    {
+        ControlSelectedAreaItemSize();
+    }
 }
