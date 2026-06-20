@@ -303,9 +303,11 @@ public class XSnapScrollRect : MonoBehaviour
      */
     [Header("ScaleController")] public float scaleAffectedArea = 300f;
 
+    private bool controlSize = true; //只能在这里改！！
     public float maxScaleFactor = 1.2f; //最大缩放系数
     public float normalScaleFactor = 1f; //普通缩放系数
     public float scaleSpeed = 10;
+
 
     private void ControlSelectedAreaItemSize()
     {
@@ -338,6 +340,9 @@ public class XSnapScrollRect : MonoBehaviour
 
     private void Update()
     {
-        ControlSelectedAreaItemSize();
+        if (controlSize)
+        {
+            ControlSelectedAreaItemSize();
+        }
     }
 }

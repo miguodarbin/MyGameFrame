@@ -28,6 +28,7 @@ public class XSceneManager : XSingletonCSharp<XSceneManager>
         while (request.progress < 0.9f)
         {
             XEventCenter.Instance.EventTrigger<float>(XEventType.E_SceneLoadProgress, request.progress);
+            callback?.Invoke(request);
             yield return null;
         }
 
