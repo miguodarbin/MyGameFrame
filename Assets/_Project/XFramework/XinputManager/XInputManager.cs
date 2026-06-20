@@ -4,156 +4,110 @@ using UnityEngine;
 using UnityEngine.EventSystems;
 
 /// <summary>
-/// 定义输入的状态，是Down按下，还是Press按中，还是Up抬起
+/// 外部用的话必须要先注册输入事件信息给InputManager，不能直接用EventCenter直接去调事件，因为inputmanager调用的事件是字典里的Key，而非直接是EventType
 /// </summary>
-public enum XInputState
-{
-    Down,
-    Press,
-    Up
-}
-
-public enum XHotKeyType
-{
-    Horizontal,
-    Vertical
-}
-
-
-/// <summary>
-/// 定义一个键盘输入的数据包，每次轮询到有键盘输入都会给监听者发这个数据包，告诉本次键盘输入是哪个键被点了，是按下还是按中还是抬起
-/// </summary>
-public struct XKeyInputInfo
-{
-    public XInputState inputState;
-    public KeyCode _keyCode;
-}
-
-/// <summary>
-/// 定义一个鼠标输入的数据包，每次轮询到有鼠标输入都会给监听者发这个数据包，告诉本次鼠标输入是哪个键被点了，是按下还是按中还是抬起
-/// </summary>
-public struct XMouseInputInfo
-{
-    public XInputState inputState;
-    public int mouseKey; //0是左键，1是右键，2是滚轮键
-}
-
-/// <summary>
-/// 定义一个热键输入的数据包，每次轮询到有热键输入都会给监听者发这个数据包，告诉本次热键输入是哪个热键，返回的值是多少
-/// </summary>
-public struct XHotKeyInputInfo
-{
-    public float inputValue;
-    public XHotKeyType hotKeyType;
-}
-
-
 public class XInputManager : XSingletonCSharp<XInputManager>
 {
-    //其实这个输入管理器的原理就是通过这个脚本去轮询是否有输入，然后触发输入事件
-    //这只是一个纯C#对象，需要被Unity相关的调一下，才会被初始化，进而去公共mono注册事件
-    //所以说可以用一个开关，就是别人用之前，必须要改一下这里的开关，如果是第一次改，不仅逻辑上是打开输入检测了，而且也就顺便初始化这个对象了，不是第一次改，说明已经初始化了，也没事儿，这个输入检测反正有个开关也很符合逻辑
-    //然后这个脚本似乎没有自己接入unity生命周期的方法，所以需要借助公共Mono模块，而且还要定义一些事件，而且这边的定义事件是全局事件，可以放到XEventType里
-
-    public bool enableInput = false; //全局开关
-
-    public bool enableKeyboard = true; //只控制键盘轮询检测的开关
-    public bool enableMouse = true; //只控制鼠标轮询检测的开关
-    public bool enableHotKey = false; //只控制热键轮训检查的开关
-
+    public bool enableInput = false; //全局输入检测开关，关掉则禁用所有输入事件
+    //TODO:可能之后要做一下单独的开关？？
 
     private XInputManager()
     {
-        //主要是这个XinputManager的单例对象生命周期只会比XMonoManager短，所以可以不用考虑在XMonoManager注销事件
-        XMonoManager.Instance.OnUpdateAddListener(LoopCheckInputs);
+        XMonoManager.Instance.OnUpdateAddListener(LoopCheckEvents);
     }
 
-    private void LoopCheckInputs() //这个类主要逻辑
+    private Dictionary<XEventType, XInputInfo>
+        _inputEventsDict = new Dictionary<XEventType, XInputInfo>(); //这个字典管理了整个游戏中全部的输入事件的键位信息，外部将不再单独在某个脚本中用input相关API，而是注册输入事件到这个字典里
+
+    public void AddOrChangeInputEvent(XEventType eventType, XInputInfo InputInfo) //提供给外部的注册输入事件，或者改变输入事件键位的方法
     {
-        if (!enableInput) //全局开关 
+        if (!_inputEventsDict.ContainsKey(eventType)) //如果字典中没有这个事件，说明是来注册输入事件的
+        {
+            _inputEventsDict.Add(eventType, InputInfo);
+        }
+        else //如果字典中有这个输入事件，说明是来改键位信息的
+        {
+            _inputEventsDict[eventType] = InputInfo;
+        }
+    }
+
+    public void RemoveInputEvent(XEventType eventType) //提供给外部的移除输入事件
+    {
+        _inputEventsDict.Remove(eventType);
+    }
+
+    //每一帧都会调用这个方法，循环检测输入事件的输入有没有被按下
+    private void LoopCheckEvents()
+    {
+        if (!enableInput)
         {
             return;
         }
 
-        if (enableKeyboard) //=====================键盘检测相关=============================
+        foreach (var inputEventPair in _inputEventsDict)
         {
-            JudgeKeyCode(KeyCode.Escape);
-            JudgeKeyCode(KeyCode.Space);
-        }
+            var inputInfo = inputEventPair.Value;
 
-        if (enableMouse) //=====================鼠标检测相关=============================
-        {
-            JudgeMouse(0);
-            JudgeMouse(1);
-        }
-
-        if (enableHotKey) //=====================热键检测相关=============================
-        {
-            JudgeHotKey("Horizontal", XHotKeyType.Horizontal);
-            JudgeHotKey("Vertical", XHotKeyType.Vertical);
+            if (inputInfo.keyBoardOrMouse == XInputInfo.KeyBoardOrMouse.Keyboard) //如果是键盘事件的话
+            {
+                CheckKeyboardInputEvent(inputInfo.keyState, inputInfo.keyCode, inputEventPair.Key);
+            }
+            else //如果是鼠标事件的话
+            {
+                CheckMouseInputEvent(inputInfo.keyState, inputInfo.mouseID, inputEventPair.Key);
+            }
         }
     }
 
-    //===================== 辅助方法 =====================
-    private void JudgeKeyCode(KeyCode keyCode)
+    //判断键盘输入事件的这次输入是否有被按下
+    private void CheckKeyboardInputEvent(XInputInfo.KeyState keyState, KeyCode keyCode, XEventType eventType)
     {
-        if (Input.GetKeyDown(keyCode))
+        if (keyState == XInputInfo.KeyState.Down)
         {
-            var keyInputInfo = new XKeyInputInfo();
-            keyInputInfo._keyCode = keyCode;
-            keyInputInfo.inputState = XInputState.Down;
-            XEventCenter.Instance.EventTrigger(XEventType.E_KeyEvent, keyInputInfo);
+            if (Input.GetKeyDown(keyCode))
+            {
+                XEventCenter.Instance.EventTrigger(eventType);
+            }
         }
-
-        if (Input.GetKey(keyCode))
+        else if (keyState == XInputInfo.KeyState.Pressed)
         {
-            var keyInputInfo = new XKeyInputInfo();
-            keyInputInfo._keyCode = keyCode;
-            keyInputInfo.inputState = XInputState.Press;
-            XEventCenter.Instance.EventTrigger(XEventType.E_KeyEvent, keyInputInfo);
+            if (Input.GetKey(keyCode))
+            {
+                XEventCenter.Instance.EventTrigger(eventType);
+            }
         }
-
-        if (Input.GetKeyUp(keyCode))
+        else if (keyState == XInputInfo.KeyState.Up)
         {
-            var keyInputInfo = new XKeyInputInfo();
-            keyInputInfo._keyCode = keyCode;
-            keyInputInfo.inputState = XInputState.Up;
-            XEventCenter.Instance.EventTrigger(XEventType.E_KeyEvent, keyInputInfo);
+            if (Input.GetKeyUp(keyCode))
+            {
+                XEventCenter.Instance.EventTrigger(eventType);
+            }
         }
     }
 
-    private void JudgeMouse(int mouseKey)
+    //判断鼠标输入事件的这次输入是否有被按下
+    private void CheckMouseInputEvent(XInputInfo.KeyState keyState, int mouseID, XEventType eventType)
     {
-        if (Input.GetMouseButtonDown(mouseKey))
+        if (keyState == XInputInfo.KeyState.Down)
         {
-            var mouseInfo = new XMouseInputInfo();
-            mouseInfo.mouseKey = mouseKey;
-            mouseInfo.inputState = XInputState.Down;
-            XEventCenter.Instance.EventTrigger(XEventType.E_MouseEvent, mouseInfo);
+            if (Input.GetMouseButtonDown(mouseID))
+            {
+                XEventCenter.Instance.EventTrigger(eventType);
+            }
         }
-
-        if (Input.GetMouseButton(mouseKey))
+        else if (keyState == XInputInfo.KeyState.Pressed)
         {
-            var mouseInfo = new XMouseInputInfo();
-            mouseInfo.mouseKey = mouseKey;
-            mouseInfo.inputState = XInputState.Press;
-            XEventCenter.Instance.EventTrigger(XEventType.E_MouseEvent, mouseInfo);
+            if (Input.GetMouseButton(mouseID))
+            {
+                XEventCenter.Instance.EventTrigger(eventType);
+            }
         }
-
-        if (Input.GetMouseButtonUp(mouseKey))
+        else if (keyState == XInputInfo.KeyState.Up)
         {
-            var mouseInfo = new XMouseInputInfo();
-            mouseInfo.mouseKey = mouseKey;
-            mouseInfo.inputState = XInputState.Up;
-            XEventCenter.Instance.EventTrigger(XEventType.E_MouseEvent, mouseInfo);
+            if (Input.GetMouseButtonUp(mouseID))
+            {
+                XEventCenter.Instance.EventTrigger(eventType);
+            }
         }
-    }
-
-    private void JudgeHotKey(string hotKeyName, XHotKeyType hotKeyType)
-    {
-        var hotKeyInputInfo = new XHotKeyInputInfo();
-        hotKeyInputInfo.hotKeyType = hotKeyType;
-        hotKeyInputInfo.inputValue = Input.GetAxis(hotKeyName);
-        XEventCenter.Instance.EventTrigger<XHotKeyInputInfo>(XEventType.E_HotKey, hotKeyInputInfo);
     }
 }

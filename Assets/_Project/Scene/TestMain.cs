@@ -5,29 +5,30 @@ using UnityEngine;
 
 public class TestMain : MonoBehaviour
 {
+    private void Awake()
+    {
+        InitInput();
+    }
+
+    private void InitInput()
+    {
+        var releaseFireBallKeyInfo = new XInputInfo(XInputInfo.KeyBoardOrMouse.Keyboard, XInputInfo.KeyState.Down, KeyCode.Space);
+        XInputManager.Instance.AddOrChangeInputEvent(XEventType.E_Confirm, releaseFireBallKeyInfo);
+    }
+
     private void OnEnable()
     {
         XInputManager.Instance.enableInput = true;
-        XEventCenter.Instance.AddEventListener<XKeyInputInfo>(XEventType.E_KeyEvent, OnSpacePressed);
+        XEventCenter.Instance.AddEventListener(XEventType.E_Confirm, ReleaseFireball);
     }
 
     private void OnDisable()
     {
-        XEventCenter.Instance.RemoveEventListener<XKeyInputInfo>(XEventType.E_KeyEvent, OnSpacePressed);
+        XEventCenter.Instance.RemoveEventListener(XEventType.E_Confirm, ReleaseFireball);
     }
 
-    private void OnSpacePressed(XKeyInputInfo info)
+    private void ReleaseFireball()
     {
-        if (info._keyCode != KeyCode.Space)
-        {
-            return;
-        }
-
-        if (info.inputState != XInputState.Press)
-        {
-            return;
-        }
-
-        Debug.Log(info._keyCode + "按下了");
+        Debug.Log("ReleaseFireball!!!");
     }
 }
