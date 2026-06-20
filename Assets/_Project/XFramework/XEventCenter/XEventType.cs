@@ -3,7 +3,7 @@
 /// </summary>
 public enum XEventType
 {
-    E_SceneLoadProgress,
-    E_SceneLoadSucess,
-    E_GetAllEntryItems
+    E_KeyEvent, //轮询输入检测中键盘的事件，触发者需要给监听者传递：XKeyInputInfo这个类型的参数。到底是按下还是按中还是抬起，还需要提供是哪个键盘键被触发了
+    E_MouseEvent, //轮询输入检测中鼠标的事件，触发者需要给监听者传递：XMouseInputInfo这个类型的参数。 到底是按下还是按中还是抬起，还需要提供是哪个鼠标键被触发了
+    E_HotKey//轮询输入检测中热键的事件，触发者需要给监听者传递：这个热键的值怎么样的，并且是哪个热键
 }
