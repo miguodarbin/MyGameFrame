@@ -83,4 +83,5 @@ public class XMonoManager : XSingletonAutoMono<XMonoManager>
     {
         _onLateUpdate -= action;
     }
+
 }

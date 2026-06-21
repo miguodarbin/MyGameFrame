@@ -203,18 +203,18 @@ public class XCSharpPoolWrapper<T> : XCSharpPoolWrapperBase where T : class, IXP
     public void ActionOnGet(T obj)
     {
         _usingList.Add(obj);
-        obj.ResetInfo();
+        obj.OnGetFromPool();
     }
 
     public void ActionOnRelease(T obj)
     {
         _usingList.Remove(obj);
-        obj.Invalid();
+        obj.OnReturnToPool();
     }
 
     public void ActionOnDestroy(T obj)
     {
-        obj.Invalid();
+        obj.OnReturnToPool();
     }
 
     public override void ClearPool()
@@ -223,7 +223,7 @@ public class XCSharpPoolWrapper<T> : XCSharpPoolWrapperBase where T : class, IXP
         {
             foreach (var obj in _usingList)
             {
-                obj.Invalid();
+                obj.OnReturnToPool();
             }
         }
 
@@ -450,9 +450,13 @@ public class XPoolManager : XSingletonCSharp<XPoolManager>
 
 public interface IXPoolObject
 {
-    //重置数据的方法
-    void ResetInfo();
+    /// <summary>
+    /// 自动调用。取出时重置的方法，不具体赋值，只是让他变成干净可用的
+    /// </summary>
+    void OnGetFromPool();
 
-
-    void Invalid();
+    /// <summary>
+    /// 自动调用。回收时清理方法，清理旧数据，让他干干净净回池子
+    /// </summary>
+    void OnReturnToPool();
 }
