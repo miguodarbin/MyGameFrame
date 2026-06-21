@@ -114,21 +114,21 @@ public class XTimerManager : XSingletonCSharp<XTimerManager>
             }
 
             //1.update每帧产生的deltatime用来驱动CurrentInterval和CurrentTime
-            int deltaTimeMS;
+            float deltaTimeMS;
             if (timerItem.TimeScaleAffected)
             {
-                deltaTimeMS = (int)(Time.deltaTime * 1000);
+                deltaTimeMS = Time.deltaTime * 1000;
             }
             else
             {
-                deltaTimeMS = (int)(Time.unscaledDeltaTime * 1000);
+                deltaTimeMS = Time.unscaledDeltaTime * 1000;
             }
 
             timerItem.UpdateTimerItemIntervalTime(deltaTimeMS);
             timerItem.UpdateTimerItemCurrentTime(deltaTimeMS);
 
             //2.判断是否已经满足了计时器的时间或者间隔时间
-            if (timerItem.Interval > 0 && timerItem.CurrentInterval >= timerItem.Interval) //如果满足了间隔时间
+            while (timerItem.Interval > 0 && timerItem.CurrentInterval >= timerItem.Interval) //如果满足了间隔时间
             {
                 timerItem.OnIntervalEnd();
             }

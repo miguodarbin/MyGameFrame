@@ -12,9 +12,9 @@ public class XTimerItem : IXPoolObject
     public int TotalDuration { get; private set; } //外部希望的这个计时器的总计时 时长
     public int Interval { get; private set; } // 外部希望的这个计时器的间隔多久算一次增长时间
 
-    public int CurrentInterval { get; private set; } //核心计时思想：当累计时间满足了一次interval之后，算一次时间增长，并调一次事件
+    public float CurrentInterval { get; private set; } //核心计时思想：当累计时间满足了一次interval之后，算一次时间增长，并调一次事件
 
-    public int CurrentTime { get; private set; } = 0; //当前计时器走的时间
+    public float CurrentTime { get; private set; } = 0; //当前计时器走的时间
 
 
     //============================== 对外公开的接口 ==============================
@@ -30,13 +30,13 @@ public class XTimerItem : IXPoolObject
     }
 
     //这个方法用来增加计时器的CurrentInterval
-    public void UpdateTimerItemIntervalTime(int deltaTime)
+    public void UpdateTimerItemIntervalTime(float deltaTime)
     {
         CurrentInterval += deltaTime;
     }
 
     //这个方法是真正用来增加计时器CurrentTime的
-    public void UpdateTimerItemCurrentTime(int deltaTime)
+    public void UpdateTimerItemCurrentTime(float deltaTime)
     {
         CurrentTime += deltaTime;
     }

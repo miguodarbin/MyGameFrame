@@ -13,7 +13,7 @@ public class TestMain : MonoBehaviour
         if (Input.GetKeyDown(KeyCode.Space))
         {
             Debug.Log(Time.time);
-            XTimerManager.Instance.CreateTimerItem(2000, 500, () => { Debug.Log("释放火球" + Time.time); }, false);
+            XTimerManager.Instance.CreateTimerItem(4000, 500, () => { Debug.Log("释放火球" + Time.time); }, false);
         }
 
         if (Input.GetKeyDown(KeyCode.Alpha1))
